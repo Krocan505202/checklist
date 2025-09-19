@@ -40,7 +40,7 @@
         const firebaseConfig = {
             apiKey: "AIzaSyALhWs0vz-ZG84KWXXdF8CoMZu6b6zFuDQ",
             authDomain: "checklist-3aaa2.firebaseapp.com",
-            databaseURL: "https://checklist-3aaa2-default-rtdb.firebaseio.com",
+            databaseURL: "https://checklist-3aaa2-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "checklist-3aaa2",
             storageBucket: "checklist-3aaa2.appspot.com",
             messagingSenderId: "315001625337",
@@ -48,11 +48,10 @@
             measurementId: "G-CX7TCLZDN3"
         };
 
-        // Inicializace Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Synchronizace checklistu
+        // Funkce pro synchronizaci checkboxů
         document.querySelectorAll('.checklist-item input').forEach(checkbox => {
             const taskId = checkbox.id;
             const taskRef = ref(database, 'checklist/' + taskId);
