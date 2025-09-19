@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checlikst - Checklist Automatizace</title>
+    <title>Checlikstu - Checklist Automatizace</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
         header { background-color: #2c3e50; color: white; text-align: center; padding: 1em; }
@@ -16,63 +16,9 @@
         .completed { text-decoration: line-through; color: #888; }
         @media (max-width: 600px) { .container { margin: 1em; } }
     </style>
-    <!-- Firebase SDK přes CDN -->
-    <script type="module">
-        // Import Firebase modulů
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-
-        // Tvoje Firebase konfigurace
-        const firebaseConfig = {
-            apiKey: "AIzaSyALhWs0vz-ZG84KWXXdF8CoMZu6b6zFuDQ",
-            authDomain: "checklist-3aaa2.firebaseapp.com",
-            projectId: "checklist-3aaa2",
-            storageBucket: "checklist-3aaa2.firebasestorage.app",
-            messagingSenderId: "315001625337",
-            appId: "1:315001625337:web:10d787a6c1440437166028",
-            measurementId: "G-CX7TCLZDN3"
-        };
-
-        // Inicializace Firebase
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-
-        // Načtení a synchronizace stavů
-        document.querySelectorAll('.checklist-item input').forEach(checkbox => {
-            const taskId = checkbox.id;
-            const taskRef = ref(database, 'checklist/' + taskId);
-
-            // Načtení stavu při startu
-            onValue(taskRef, (snapshot) => {
-                const checked = snapshot.val();
-                checkbox.checked = checked || false;
-                if (checked) {
-                    checkbox.nextElementSibling.classList.add('completed');
-                } else {
-                    checkbox.nextElementSibling.classList.remove('completed');
-                }
-            });
-
-            // Ukládání stavu při změně
-            checkbox.addEventListener('change', function() {
-                const label = this.nextElementSibling;
-                set(taskRef, this.checked)
-                    .then(() => {
-                        if (this.checked) {
-                            label.classList.add('completed');
-                        } else {
-                            label.classList.remove('completed');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Chyba při ukládání do databáze:', error);
-                    });
-            });
-        });
-    </script>
 </head>
 <body>
-    <header><h1>Checlikst</h1></header>
+    <header><h1>Checlikstu</h1></header>
     <div class="container">
         <section class="checklist">
             <h2>Checklist projektu automatizace</h2>
@@ -85,5 +31,54 @@
             <div class="checklist-item"><input type="checkbox" id="task7"><label for="task7">Dokumentace projektu</label></div>
         </section>
     </div>
+
+    <!-- Firebase modular SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyALhWs0vz-ZG84KWXXdF8CoMZu6b6zFuDQ",
+            authDomain: "checklist-3aaa2.firebaseapp.com",
+            databaseURL: "https://checklist-3aaa2-default-rtdb.firebaseio.com",
+            projectId: "checklist-3aaa2",
+            storageBucket: "checklist-3aaa2.appspot.com",
+            messagingSenderId: "315001625337",
+            appId: "1:315001625337:web:10d787a6c1440437166028",
+            measurementId: "G-CX7TCLZDN3"
+        };
+
+        // Inicializace Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Synchronizace checklistu
+        document.querySelectorAll('.checklist-item input').forEach(checkbox => {
+            const taskId = checkbox.id;
+            const taskRef = ref(database, 'checklist/' + taskId);
+
+            // Načtení stavu při startu
+            onValue(taskRef, snapshot => {
+                const checked = snapshot.val();
+                if (checked) {
+                    checkbox.checked = true;
+                    checkbox.nextElementSibling.classList.add('completed');
+                } else {
+                    checkbox.checked = false;
+                    checkbox.nextElementSibling.classList.remove('completed');
+                }
+            });
+
+            // Ukládání stavu při změně
+            checkbox.addEventListener('change', function() {
+                set(taskRef, this.checked);
+                if (this.checked) {
+                    this.nextElementSibling.classList.add('completed');
+                } else {
+                    this.nextElementSibling.classList.remove('completed');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
