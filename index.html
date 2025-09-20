@@ -5,41 +5,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checklist - Automatizace</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
-        header { background-color: #2c3e50; color: white; text-align: center; padding: 1em; }
-        .container { max-width: 800px; margin: 2em auto; padding: 0 1em; }
-        .checklist { background: white; padding: 2em; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .checklist h2 { color: #2c3e50; margin-bottom: 1em; }
-        .checklist-item { display: flex; align-items: center; margin-bottom: 1em; }
-        .subtask-list { margin-left: 2em; margin-bottom: 1em; }
-        .subtask-item { display: flex; align-items: center; margin-bottom: 0.5em; }
-        .checklist-item input[type="checkbox"], .subtask-item input[type="checkbox"] { margin-right: 1em; }
-        .checklist-item label, .subtask-item label { font-size: 1.1em; }
-        .completed { text-decoration: line-through; color: #888; }
-        .delete-btn, .edit-btn { margin-left: 1em; background-color: #e74c3c; color: white; border: none; padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; }
-        .edit-btn { background-color: #3498db; }
-        .delete-btn:hover { background-color: #c0392b; }
-        .edit-btn:hover { background-color: #2980b9; }
-        .add-task, .add-subtask { margin-bottom: 1em; }
-        .add-task input[type="text"], .add-subtask input[type="text"] { padding: 0.5em; width: 70%; margin-right: 1em; }
-        .add-task button, .add-subtask button { padding: 0.5em 1em; background-color: #2c3e50; color: white; border: none; border-radius: 3px; cursor: pointer; }
-        .add-task button:hover, .add-subtask button:hover { background-color: #34495e; }
-        .auth-btn { margin: 1em 0; padding: 0.5em 1em; border: none; border-radius: 3px; cursor: pointer; }
-        .login { background-color: #27ae60; color: white; }
-        .logout { background-color: #e67e22; color: white; }
-        /* Added styles for separation */
-        .add-task { 
-            border-bottom: 2px solid #2c3e50; 
-            padding-bottom: 1em; 
-            margin-bottom: 1.5em; 
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
         }
-        .checklist-items-divider { 
-            border-top: 1px solid #ddd; 
-            margin-top: 1em; 
-            padding-top: 1em; 
+        header {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 1em;
         }
-        @media (max-width: 600px) { 
-            .container { margin: 1em; } 
+        .container {
+            max-width: 800px;
+            margin: 2em auto;
+            padding: 0 1em;
+        }
+        .checklist {
+            background: white;
+            padding: 2em;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .checklist h2 {
+            color: #2c3e50;
+            margin-bottom: 1em;
+        }
+        .checklist-item {
+            margin-bottom: 1.5em;
+            padding: 1em;
+            border-bottom: 1px solid #eee;
+        }
+        .task-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5em;
+        }
+        .subtask-list {
+            margin-left: 2em;
+            margin-top: 0.5em;
+            padding-left: 1em;
+            border-left: 2px solid #ddd;
+        }
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5em;
+        }
+        .checklist-item input[type="checkbox"],
+        .subtask-item input[type="checkbox"] {
+            margin-right: 1em;
+        }
+        .checklist-item label,
+        .subtask-item label {
+            font-size: 1.1em;
+            flex-grow: 1;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .delete-btn, .edit-btn {
+            margin-left: 0.5em;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 0.3em 0.6em;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .edit-btn {
+            background-color: #3498db;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        .edit-btn:hover {
+            background-color: #2980b9;
+        }
+        .add-task, .add-subtask {
+            margin: 1em 0;
+            display: flex;
+            align-items: center;
+        }
+        .add-task input[type="text"],
+        .add-subtask input[type="text"] {
+            padding: 0.5em;
+            width: 70%;
+            margin-right: 1em;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .add-task button,
+        .add-subtask button {
+            padding: 0.5em 1em;
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .add-task button:hover,
+        .add-subtask button:hover {
+            background-color: #34495e;
+        }
+        .auth-btn {
+            margin: 1em 0;
+            padding: 0.5em 1em;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .login {
+            background-color: #27ae60;
+            color: white;
+        }
+        .logout {
+            background-color: #e67e22;
+            color: white;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 1em;
+                padding: 0 0.5em;
+            }
+            .checklist-item {
+                padding: 0.5em;
+            }
+            .add-task input[type="text"],
+            .add-subtask input[type="text"] {
+                width: 60%;
+            }
+            .task-header {
+                flex-wrap: wrap;
+            }
+            .delete-btn, .edit-btn {
+                margin-top: 0.5em;
+            }
         }
     </style>
 </head>
@@ -58,7 +163,7 @@
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
                 <button onclick="addTask()">Přidat úkol</button>
             </div>
-            <div class="checklist-items-divider" id="checklist-items"></div>
+            <div id="checklist-items"></div>
         </section>
     </div>
 
@@ -89,17 +194,17 @@
         const taskControls = document.getElementById("task-controls");
         const checklistItems = document.getElementById("checklist-items");
 
-        // Přihlášení
+       
         loginBtn.onclick = () => {
             signInWithPopup(auth, provider).catch(err => alert("Chyba: " + err.message));
         };
 
-        // Odhlášení
+        
         logoutBtn.onclick = () => {
             signOut(auth);
         };
 
-        // Stav uživatele
+    
         onAuthStateChanged(auth, user => {
             if (user) {
                 loginBtn.style.display = "none";
@@ -116,7 +221,7 @@
             }
         });
 
-        // Přidání úkolu
+        
         window.addTask = function() {
             const newTaskInput = document.getElementById('new-task');
             const taskText = newTaskInput.value.trim();
@@ -130,7 +235,7 @@
             newTaskInput.value = '';
         };
 
-        // Úprava úkolu
+        
         window.editTask = function(taskId, currentText) {
             const newText = prompt("Upravit úkol:", currentText);
             if (newText && newText.trim() !== '') {
@@ -142,7 +247,7 @@
             }
         };
 
-        // Přidání podúkolu
+       
         window.addSubtask = function(taskId) {
             const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
             const subtaskText = subtaskInput.value.trim();
@@ -154,19 +259,18 @@
             subtaskInput.value = '';
         };
 
-        // Smazání úkolu
         window.deleteTask = function(taskId) {
             const taskRef = ref(database, 'checklist/' + taskId);
             remove(taskRef);
         };
 
-        // Smazání podúkolu
+        
         window.deleteSubtask = function(taskId, subtaskId) {
             const subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
             remove(subtaskRef);
         };
 
-        // Nastavení checkboxu pro hlavní úkol
+     
         function setupCheckbox(taskId) {
             const checkbox = document.getElementById(taskId);
             const taskRef = ref(database, 'checklist/' + taskId);
@@ -179,7 +283,6 @@
             });
         }
 
-        // Nastavení checkboxu pro podúkol
         function setupSubtaskCheckbox(taskId, subtaskId) {
             const checkbox = document.getElementById(subtaskId);
             const subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
@@ -203,10 +306,12 @@
                     const newItem = document.createElement('div');
                     newItem.className = 'checklist-item';
                     newItem.innerHTML = `
-                        <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
-                        <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
-                        <button class="edit-btn" onclick="editTask('${taskId}', '${taskData.text}')">Upravit</button>
-                        <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>
+                        <div class="task-header">
+                            <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
+                            <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
+                            <button class="edit-btn" onclick="editTask('${taskId}', '${taskData.text}')">Upravit</button>
+                            <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>
+                        </div>
                         <div class="add-subtask">
                             <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
                             <button onclick="addSubtask('${taskId}')">Přidat podúkol</button>
@@ -216,7 +321,6 @@
                     checklistItems.appendChild(newItem);
                     setupCheckbox(taskId);
 
-                    // Načtení podúkolů
                     if (taskData.subtasks) {
                         const subtaskList = document.getElementById(`subtask-list-${taskId}`);
                         Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
