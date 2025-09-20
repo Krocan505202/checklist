@@ -153,9 +153,12 @@
     <div class="container">
         <section class="checklist">
             <h2>Checklist projektu automatizace</h2>
+
+            <!-- Přihlášení / Odhlášení -->
             <button id="login-btn" class="auth-btn login">Přihlásit se Google</button>
             <button id="logout-btn" class="auth-btn logout" style="display:none;">Odhlásit se</button>
             <p id="user-info"></p>
+
             <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
                 <button onclick="addTask()">Přidat úkol</button>
@@ -163,174 +166,7 @@
             <div id="checklist-items"></div>
         </section>
     </div>
-    <script type="module" src="auth.js"></script>
-    <script type="module" src="tasks.js"></script>
-</body>
-</html><!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist - Automatizace</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        header {
-            background-color: #2c3e50;
-            color: white;
-            text-align: center;
-            padding: 1em;
-        }
-        .container {
-            max-width: 800px;
-            margin: 2em auto;
-            padding: 0 1em;
-        }
-        .checklist {
-            background: white;
-            padding: 2em;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .checklist h2 {
-            color: #2c3e50;
-            margin-bottom: 1em;
-        }
-        .checklist-item {
-            margin-bottom: 1.5em;
-            padding: 1em;
-            border-bottom: 1px solid #eee;
-        }
-        .task-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.5em;
-        }
-        .subtask-list {
-            margin-left: 2em;
-            margin-top: 0.5em;
-            padding-left: 1em;
-            border-left: 2px solid #ddd;
-        }
-        .subtask-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.5em;
-        }
-        .checklist-item input[type="checkbox"],
-        .subtask-item input[type="checkbox"] {
-            margin-right: 1em;
-        }
-        .checklist-item label,
-        .subtask-item label {
-            font-size: 1.1em;
-            flex-grow: 1;
-        }
-        .completed {
-            text-decoration: line-through;
-            color: #888;
-        }
-        .delete-btn, .edit-btn {
-            margin-left: 0.5em;
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            padding: 0.3em 0.6em;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-        .edit-btn {
-            background-color: #3498db;
-        }
-        .delete-btn:hover {
-            background-color: #c0392b;
-        }
-        .edit-btn:hover {
-            background-color: #2980b9;
-        }
-        .add-task, .add-subtask {
-            margin: 1em 0;
-            display: flex;
-            align-items: center;
-        }
-        .add-task input[type="text"],
-        .add-subtask input[type="text"] {
-            padding: 0.5em;
-            width: 70%;
-            margin-right: 1em;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-        .add-task button,
-        .add-subtask button {
-            padding: 0.5em 1em;
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .add-task button:hover,
-        .add-subtask button:hover {
-            background-color: #34495e;
-        }
-        .auth-btn {
-            margin: 1em 0;
-            padding: 0.5em 1em;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .login {
-            background-color: #27ae60;
-            color: white;
-        }
-        .logout {
-            background-color: #e67e22;
-            color: white;
-        }
-        @media (max-width: 600px) {
-            .container {
-                margin: 1em;
-                padding: 0 0.5em;
-            }
-            .checklist-item {
-                padding: 0.5em;
-            }
-            .add-task input[type="text"],
-            .add-subtask input[type="text"] {
-                width: 60%;
-            }
-            .task-header {
-                flex-wrap: wrap;
-            }
-            .delete-btn, .edit-btn {
-                margin-top: 0.5em;
-            }
-        }
-    </style>
-</head>
-<body>
-    <header><h1>Checklist</h1></header>
-    <div class="container">
-        <section class="checklist">
-            <h2>Checklist projektu automatizace</h2>
-            <button id="login-btn" class="auth-btn login">Přihlásit se Google</button>
-            <button id="logout-btn" class="auth-btn logout" style="display:none;">Odhlásit se</button>
-            <p id="user-info"></p>
-            <div class="add-task" style="display:none;" id="task-controls">
-                <input type="text" id="new-task" placeholder="Zadejte nový úkol">
-                <button onclick="addTask()">Přidat úkol</button>
-            </div>
-            <div id="checklist-items"></div>
-        </section>
-    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
@@ -358,14 +194,17 @@
         const taskControls = document.getElementById("task-controls");
         const checklistItems = document.getElementById("checklist-items");
 
+       
         loginBtn.onclick = () => {
             signInWithPopup(auth, provider).catch(err => alert("Chyba: " + err.message));
         };
 
+        
         logoutBtn.onclick = () => {
             signOut(auth);
         };
 
+    
         onAuthStateChanged(auth, user => {
             if (user) {
                 loginBtn.style.display = "none";
@@ -382,6 +221,7 @@
             }
         });
 
+        
         window.addTask = function() {
             const newTaskInput = document.getElementById('new-task');
             const taskText = newTaskInput.value.trim();
@@ -395,6 +235,7 @@
             newTaskInput.value = '';
         };
 
+        
         window.editTask = function(taskId, currentText) {
             const newText = prompt("Upravit úkol:", currentText);
             if (newText && newText.trim() !== '') {
@@ -406,6 +247,7 @@
             }
         };
 
+       
         window.addSubtask = function(taskId) {
             const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
             const subtaskText = subtaskInput.value.trim();
@@ -422,11 +264,13 @@
             remove(taskRef);
         };
 
+        
         window.deleteSubtask = function(taskId, subtaskId) {
             const subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
             remove(subtaskRef);
         };
 
+     
         function setupCheckbox(taskId) {
             const checkbox = document.getElementById(taskId);
             const taskRef = ref(database, 'checklist/' + taskId);
@@ -451,6 +295,7 @@
             });
         }
 
+        // Načtení úkolů
         function loadTasks() {
             const tasksRef = ref(database, 'checklist');
             onValue(tasksRef, snapshot => {
