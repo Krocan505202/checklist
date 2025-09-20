@@ -11,15 +11,19 @@
         .checklist { background: white; padding: 2em; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .checklist h2 { color: #2c3e50; margin-bottom: 1em; }
         .checklist-item { display: flex; align-items: center; margin-bottom: 1em; }
-        .checklist-item input[type="checkbox"] { margin-right: 1em; }
-        .checklist-item label { font-size: 1.1em; }
+        .subtask-list { margin-left: 2em; margin-bottom: 1em; }
+        .subtask-item { display: flex; align-items: center; margin-bottom: 0.5em; }
+        .checklist-item input[type="checkbox"], .subtask-item input[type="checkbox"] { margin-right: 1em; }
+        .checklist-item label, .subtask-item label { font-size: 1.1em; }
         .completed { text-decoration: line-through; color: #888; }
-        .delete-btn { margin-left: 1em; background-color: #e74c3c; color: white; border: none; padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; }
+        .delete-btn, .edit-btn { margin-left: 1em; background-color: #e74c3c; color: white; border: none; padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; }
+        .edit-btn { background-color: #3498db; }
         .delete-btn:hover { background-color: #c0392b; }
-        .add-task { margin-bottom: 1em; }
-        .add-task input[type="text"] { padding: 0.5em; width: 70%; margin-right: 1em; }
-        .add-task button { padding: 0.5em 1em; background-color: #2c3e50; color: white; border: none; border-radius: 3px; cursor: pointer; }
-        .add-task button:hover { background-color: #34495e; }
+        .edit-btn:hover { background-color: #2980b9; }
+        .add-task, .add-subtask { margin-bottom: 1em; }
+        .add-task input[type="text"], .add-subtask input[type="text"] { padding: 0.5em; width: 70%; margin-right: 1em; }
+        .add-task button, .add-subtask button { padding: 0.5em 1em; background-color: #2c3e50; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .add-task button:hover, .add-subtask button:hover { background-color: #34495e; }
         .auth-btn { margin: 1em 0; padding: 0.5em 1em; border: none; border-radius: 3px; cursor: pointer; }
         .login { background-color: #27ae60; color: white; }
         .logout { background-color: #e67e22; color: white; }
@@ -45,7 +49,6 @@
         </section>
     </div>
 
-    <!-- Firebase modular SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
@@ -110,8 +113,32 @@
             const newTaskRef = push(tasksRef);
             const newTaskId = newTaskRef.key;
 
-            set(newTaskRef, { text: taskText, checked: false });
+            set(newTaskRef, { text: taskText, checked: false, subtasks: {} });
             newTaskInput.value = '';
+        };
+
+        // Úprava úkolu
+        window.editTask = function(taskId, currentText) {
+            const newText = prompt("Upravit úkol:", currentText);
+            if (newText && newText.trim() !== '') {
+                const taskRef = ref(database, 'checklist/' + taskId);
+                onValue(taskRef, snapshot => {
+                    const taskData = snapshot.val();
+                    set(taskRef, { ...taskData, text: newText.trim() });
+                }, { onlyOnce: true });
+            }
+        };
+
+        // Přidání podúkolu
+        window.addSubtask = function(taskId) {
+            const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
+            const subtaskText = subtaskInput.value.trim();
+            if (subtaskText === '') return;
+
+            const subtaskRef = ref(database, `checklist/${taskId}/subtasks`);
+            const newSubtaskRef = push(subtaskRef);
+            set(newSubtaskRef, { text: subtaskText, checked: false });
+            subtaskInput.value = '';
         };
 
         // Smazání úkolu
@@ -120,13 +147,35 @@
             remove(taskRef);
         };
 
-        // Nastavení checkboxu
+        // Smazání podúkolu
+        window.deleteSubtask = function(taskId, subtaskId) {
+            const subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
+            remove(subtaskRef);
+        };
+
+        // Nastavení checkboxu pro hlavní úkol
         function setupCheckbox(taskId) {
             const checkbox = document.getElementById(taskId);
             const taskRef = ref(database, 'checklist/' + taskId);
 
             checkbox.addEventListener('change', function() {
-                set(taskRef, { text: checkbox.nextElementSibling.textContent, checked: this.checked });
+                onValue(taskRef, snapshot => {
+                    const taskData = snapshot.val();
+                    set(taskRef, { ...taskData, checked: this.checked });
+                }, { onlyOnce: true });
+            });
+        }
+
+        // Nastavení checkboxu pro podúkol
+        function setupSubtaskCheckbox(taskId, subtaskId) {
+            const checkbox = document.getElementById(subtaskId);
+            const subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
+
+            checkbox.addEventListener('change', function() {
+                onValue(subtaskRef, snapshot => {
+                    const subtaskData = snapshot.val();
+                    set(subtaskRef, { ...subtaskData, checked: this.checked });
+                }, { onlyOnce: true });
             });
         }
 
@@ -140,11 +189,35 @@
                     const taskData = childSnapshot.val();
                     const newItem = document.createElement('div');
                     newItem.className = 'checklist-item';
-                    newItem.innerHTML = `<input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
-                                         <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
-                                         <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>`;
+                    newItem.innerHTML = `
+                        <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
+                        <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
+                        <button class="edit-btn" onclick="editTask('${taskId}', '${taskData.text}')">Upravit</button>
+                        <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>
+                        <div class="add-subtask">
+                            <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
+                            <button onclick="addSubtask('${taskId}')">Přidat podúkol</button>
+                        </div>
+                        <div class="subtask-list" id="subtask-list-${taskId}"></div>
+                    `;
                     checklistItems.appendChild(newItem);
                     setupCheckbox(taskId);
+
+                    // Načtení podúkolů
+                    if (taskData.subtasks) {
+                        const subtaskList = document.getElementById(`subtask-list-${taskId}`);
+                        Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
+                            const subtaskItem = document.createElement('div');
+                            subtaskItem.className = 'subtask-item';
+                            subtaskItem.innerHTML = `
+                                <input type="checkbox" id="${subtaskId}" ${subtaskData.checked ? "checked" : ""}>
+                                <label for="${subtaskId}" class="${subtaskData.checked ? "completed" : ""}">${subtaskData.text}</label>
+                                <button class="delete-btn" onclick="deleteSubtask('${taskId}', '${subtaskId}')">Smazat</button>
+                            `;
+                            subtaskList.appendChild(subtaskItem);
+                            setupSubtaskCheckbox(taskId, subtaskId);
+                        });
+                    }
                 });
             });
         }
