@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checlikst - Checklist Automatizace</title>
+    <title>Checklist - Automatizace</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
         header { background-color: #2c3e50; color: white; text-align: center; padding: 1em; }
@@ -20,34 +20,36 @@
         .add-task input[type="text"] { padding: 0.5em; width: 70%; margin-right: 1em; }
         .add-task button { padding: 0.5em 1em; background-color: #2c3e50; color: white; border: none; border-radius: 3px; cursor: pointer; }
         .add-task button:hover { background-color: #34495e; }
+        .auth-btn { margin: 1em 0; padding: 0.5em 1em; border: none; border-radius: 3px; cursor: pointer; }
+        .login { background-color: #27ae60; color: white; }
+        .logout { background-color: #e67e22; color: white; }
         @media (max-width: 600px) { .container { margin: 1em; } }
     </style>
 </head>
 <body>
-    <header><h1>Checlikst</h1></header>
+    <header><h1>Checklist</h1></header>
     <div class="container">
         <section class="checklist">
             <h2>Checklist projektu automatizace</h2>
-            <div class="add-task">
+
+            <!-- Přihlášení / Odhlášení -->
+            <button id="login-btn" class="auth-btn login">Přihlásit se Google</button>
+            <button id="logout-btn" class="auth-btn logout" style="display:none;">Odhlásit se</button>
+            <p id="user-info"></p>
+
+            <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
                 <button onclick="addTask()">Přidat úkol</button>
             </div>
-            <div id="checklist-items">
-                <div class="checklist-item"><input type="checkbox" id="task1"><label for="task1">Dodělat klavesnici na všech 16 kláves</label><button class="delete-btn" onclick="deleteTask('task1')">Smazat</button></div>
-                <div class="checklist-item"><input type="checkbox" id="task2"><label for="task2">Dodělat komunikaci s klavesnicí a a esp32c3</label><button class="delete-btn" onclick="deleteTask('task2')">Smazat</button></div>
-                <div class="checklist-item"><input type="checkbox" id="task3"><label for="task3">Dát python script do startup configu</label><button class="delete-btn" onclick="deleteTask('task3')">Smazat</button></div>
-                <div class="checklist-item"><input type="checkbox" id="task4"><label for="task4">Dodělat kod pro esp 32c3 ohledně wheater station</label><button class="delete-btn" onclick="deleteTask('task4')">Smazat</button></div>
-                <div class="checklist-item"><input type="checkbox" id="task5"><label for="task5">Připojit wheater station esp 01 na esp 32C3</label><button class="delete-btn" onclick="deleteTask('task5')">Smazat</button></div>
-                <div class="checklist-item"><input type="checkbox" id="task6"><label for="task6">Udělat esp 01 pro ovládní světel</label><button class="delete-btn" onclick="deleteTask('task6')">Smazat</button></div>
-                <div class="checklist-item"><input type="checkbox" id="task7"><label for="task7">Napojit esp01 light na esp 32c3</label><button class="delete-btn" onclick="deleteTask('task7')">Smazat</button></div>
-            </div>
+            <div id="checklist-items"></div>
         </section>
     </div>
 
     <!-- Firebase modular SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, remove, push, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyALhWs0vz-ZG84KWXXdF8CoMZu6b6zFuDQ",
@@ -62,8 +64,43 @@
 
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
 
-        // Funkce pro přidání nového úkolu
+        const loginBtn = document.getElementById("login-btn");
+        const logoutBtn = document.getElementById("logout-btn");
+        const userInfo = document.getElementById("user-info");
+        const taskControls = document.getElementById("task-controls");
+        const checklistItems = document.getElementById("checklist-items");
+
+        // Přihlášení
+        loginBtn.onclick = () => {
+            signInWithPopup(auth, provider).catch(err => alert("Chyba: " + err.message));
+        };
+
+        // Odhlášení
+        logoutBtn.onclick = () => {
+            signOut(auth);
+        };
+
+        // Stav uživatele
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                loginBtn.style.display = "none";
+                logoutBtn.style.display = "inline-block";
+                userInfo.textContent = "Přihlášen jako: " + user.displayName;
+                taskControls.style.display = "block";
+                loadTasks();
+            } else {
+                loginBtn.style.display = "inline-block";
+                logoutBtn.style.display = "none";
+                userInfo.textContent = "";
+                taskControls.style.display = "none";
+                checklistItems.innerHTML = "";
+            }
+        });
+
+        // Přidání úkolu
         window.addTask = function() {
             const newTaskInput = document.getElementById('new-task');
             const taskText = newTaskInput.value.trim();
@@ -74,69 +111,43 @@
             const newTaskId = newTaskRef.key;
 
             set(newTaskRef, { text: taskText, checked: false });
-
-            const checklistItems = document.getElementById('checklist-items');
-            const newItem = document.createElement('div');
-            newItem.className = 'checklist-item';
-            newItem.innerHTML = `<input type="checkbox" id="${newTaskId}"><label for="${newTaskId}">${taskText}</label><button class="delete-btn" onclick="deleteTask('${newTaskId}')">Smazat</button>`;
-            checklistItems.appendChild(newItem);
-
             newTaskInput.value = '';
-            setupCheckbox(newTaskId);
         };
 
-        // Funkce pro smazání úkolu
+        // Smazání úkolu
         window.deleteTask = function(taskId) {
             const taskRef = ref(database, 'checklist/' + taskId);
             remove(taskRef);
-            const taskElement = document.getElementById(taskId).parentElement;
-            taskElement.remove();
         };
 
-        // Funkce pro nastavení checkboxu
+        // Nastavení checkboxu
         function setupCheckbox(taskId) {
             const checkbox = document.getElementById(taskId);
             const taskRef = ref(database, 'checklist/' + taskId);
 
-            onValue(taskRef, snapshot => {
-                const data = snapshot.val();
-                if (data) {
-                    checkbox.checked = data.checked || false;
-                    const label = checkbox.nextElementSibling;
-                    label.textContent = data.text;
-                    if (data.checked) {
-                        label.classList.add('completed');
-                    } else {
-                        label.classList.remove('completed');
-                    }
-                }
-            });
-
             checkbox.addEventListener('change', function() {
                 set(taskRef, { text: checkbox.nextElementSibling.textContent, checked: this.checked });
-                if (this.checked) {
-                    this.nextElementSibling.classList.add('completed');
-                } else {
-                    this.nextElementSibling.classList.remove('completed');
-                }
             });
         }
 
-        // Načtení všech úkolů při startu
-        const tasksRef = ref(database, 'checklist');
-        onValue(tasksRef, snapshot => {
-            const checklistItems = document.getElementById('checklist-items');
-            checklistItems.innerHTML = '';
-            snapshot.forEach(childSnapshot => {
-                const taskId = childSnapshot.key;
-                const taskData = childSnapshot.val();
-                const newItem = document.createElement('div');
-                newItem.className = 'checklist-item';
-                newItem.innerHTML = `<input type="checkbox" id="${taskId}"><label for="${taskId}">${taskData.text}</label><button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>`;
-                checklistItems.appendChild(newItem);
-                setupCheckbox(taskId);
+        // Načtení úkolů
+        function loadTasks() {
+            const tasksRef = ref(database, 'checklist');
+            onValue(tasksRef, snapshot => {
+                checklistItems.innerHTML = '';
+                snapshot.forEach(childSnapshot => {
+                    const taskId = childSnapshot.key;
+                    const taskData = childSnapshot.val();
+                    const newItem = document.createElement('div');
+                    newItem.className = 'checklist-item';
+                    newItem.innerHTML = `<input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
+                                         <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
+                                         <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>`;
+                    checklistItems.appendChild(newItem);
+                    setupCheckbox(taskId);
+                });
             });
-        });
+        }
     </script>
 </body>
 </html>
