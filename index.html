@@ -12,14 +12,14 @@
         .checklist h2 { color: #2c3e50; margin-bottom: 1em; }
         .checklist-item { display: flex; align-items: center; margin-bottom: 1em; }
         .checklist-item input[type="checkbox"] { margin-right: 1em; }
-        .checklist-item label { font-size: 1.1em; flex-grow: 1; }
-        .checklist-item button { margin-left: 1em; background: #e74c3c; color: white; border: none; padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; }
-        .checklist-item button:hover { background: #c0392b; }
+        .checklist-item label { font-size: 1.1em; }
         .completed { text-decoration: line-through; color: #888; }
-        .add-task-form { margin-bottom: 2em; }
-        .add-task-form input[type="text"] { padding: 0.5em; width: 70%; margin-right: 1em; }
-        .add-task-form button { padding: 0.5em 1em; background: #2ecc71; color: white; border: none; border-radius: 3px; cursor: pointer; }
-        .add-task-form button:hover { background: #27ae60; }
+        .delete-btn { margin-left: 1em; background-color: #e74c3c; color: white; border: none; padding: 0.3em 0.6em; border-radius: 3px; cursor: pointer; }
+        .delete-btn:hover { background-color: #c0392b; }
+        .add-task { margin-bottom: 1em; }
+        .add-task input[type="text"] { padding: 0.5em; width: 70%; margin-right: 1em; }
+        .add-task button { padding: 0.5em 1em; background-color: #2c3e50; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .add-task button:hover { background-color: #34495e; }
         @media (max-width: 600px) { .container { margin: 1em; } }
     </style>
 </head>
@@ -28,19 +28,26 @@
     <div class="container">
         <section class="checklist">
             <h2>Checklist projektu automatizace</h2>
-            <div class="add-task-form">
-                <input type="text" id="new-task-input" placeholder="Nový úkol...">
+            <div class="add-task">
+                <input type="text" id="new-task" placeholder="Zadejte nový úkol">
                 <button onclick="addTask()">Přidat úkol</button>
             </div>
-            <div id="checklist-container">
-                <!-- Tasks will be dynamically added here -->
+            <div id="checklist-items">
+                <div class="checklist-item"><input type="checkbox" id="task1"><label for="task1">Dodělat klavesnici na všech 16 kláves</label><button class="delete-btn" onclick="deleteTask('task1')">Smazat</button></div>
+                <div class="checklist-item"><input type="checkbox" id="task2"><label for="task2">Dodělat komunikaci s klavesnicí a a esp32c3</label><button class="delete-btn" onclick="deleteTask('task2')">Smazat</button></div>
+                <div class="checklist-item"><input type="checkbox" id="task3"><label for="task3">Dát python script do startup configu</label><button class="delete-btn" onclick="deleteTask('task3')">Smazat</button></div>
+                <div class="checklist-item"><input type="checkbox" id="task4"><label for="task4">Dodělat kod pro esp 32c3 ohledně wheater station</label><button class="delete-btn" onclick="deleteTask('task4')">Smazat</button></div>
+                <div class="checklist-item"><input type="checkbox" id="task5"><label for="task5">Připojit wheater station esp 01 na esp 32C3</label><button class="delete-btn" onclick="deleteTask('task5')">Smazat</button></div>
+                <div class="checklist-item"><input type="checkbox" id="task6"><label for="task6">Udělat esp 01 pro ovládní světel</label><button class="delete-btn" onclick="deleteTask('task6')">Smazat</button></div>
+                <div class="checklist-item"><input type="checkbox" id="task7"><label for="task7">Napojit esp01 light na esp 32c3</label><button class="delete-btn" onclick="deleteTask('task7')">Smazat</button></div>
             </div>
         </section>
     </div>
 
+    <!-- Firebase modular SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, push, remove, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+        import { getDatabase, ref, onValue, set, remove, push, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyALhWs0vz-ZG84KWXXdF8CoMZu6b6zFuDQ",
@@ -55,96 +62,80 @@
 
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
-        const checklistRef = ref(database, 'checklist');
 
-        // Initial tasks to populate if database is empty
-        const initialTasks = [
-            { text: "Dodělat klavesnici na všech 16 kláves", completed: false },
-            { text: "Dodělat komunikaci s klavesnicí a esp32c3", completed: false },
-            { text: "Dát python script do startup configu", completed: false },
-            { text: "Dodělat kod pro esp 32c3 ohledně wheater station", completed: false },
-            { text: "Připojit wheater station esp 01 na esp 32C3", completed: false },
-            { text: "Udělat esp 01 pro ovládní světel", completed: false },
-            { text: "Napojit esp01 light na esp 32c3", completed: false }
-        ];
-
-        // Function to initialize tasks if database is empty
-        async function initializeTasks() {
-            const snapshot = await get(checklistRef);
-            if (!snapshot.exists()) {
-                initialTasks.forEach(task => {
-                    const newTaskRef = push(checklistRef);
-                    set(newTaskRef, task);
-                });
-            }
-        }
-
-        // Call initialization
-        initializeTasks();
-
-        // Function to add a new task
+        // Funkce pro přidání nového úkolu
         window.addTask = function() {
-            const input = document.getElementById('new-task-input');
-            const taskText = input.value.trim();
+            const newTaskInput = document.getElementById('new-task');
+            const taskText = newTaskInput.value.trim();
             if (taskText === '') return;
 
-            const newTaskRef = push(checklistRef);
-            set(newTaskRef, {
-                text: taskText,
-                completed: false
-            });
-            input.value = '';
-        }
+            const tasksRef = ref(database, 'checklist');
+            const newTaskRef = push(tasksRef);
+            const newTaskId = newTaskRef.key;
 
-        // Function to create task HTML
-        function createTaskElement(taskId, taskData) {
-            const div = document.createElement('div');
-            div.className = 'checklist-item';
-            div.innerHTML = `
-                <input type="checkbox" id="${taskId}" ${taskData.completed ? 'checked' : ''}>
-                <label for="${taskId}" ${taskData.completed ? 'class="completed"' : ''}>${taskData.text}</label>
-                <button onclick="deleteTask('${taskId}')">Smazat</button>
-            `;
-            
-            // Add checkbox event listener
-            const checkbox = div.querySelector('input');
-            checkbox.addEventListener('change', function() {
-                set(ref(database, 'checklist/' + taskId + '/completed'), this.checked);
-                const label = this.nextElementSibling;
-                if (this.checked) {
-                    label.classList.add('completed');
-                } else {
-                    label.classList.remove('completed');
+            set(newTaskRef, { text: taskText, checked: false });
+
+            const checklistItems = document.getElementById('checklist-items');
+            const newItem = document.createElement('div');
+            newItem.className = 'checklist-item';
+            newItem.innerHTML = `<input type="checkbox" id="${newTaskId}"><label for="${newTaskId}">${taskText}</label><button class="delete-btn" onclick="deleteTask('${newTaskId}')">Smazat</button>`;
+            checklistItems.appendChild(newItem);
+
+            newTaskInput.value = '';
+            setupCheckbox(newTaskId);
+        };
+
+        // Funkce pro smazání úkolu
+        window.deleteTask = function(taskId) {
+            const taskRef = ref(database, 'checklist/' + taskId);
+            remove(taskRef);
+            const taskElement = document.getElementById(taskId).parentElement;
+            taskElement.remove();
+        };
+
+        // Funkce pro nastavení checkboxu
+        function setupCheckbox(taskId) {
+            const checkbox = document.getElementById(taskId);
+            const taskRef = ref(database, 'checklist/' + taskId);
+
+            onValue(taskRef, snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    checkbox.checked = data.checked || false;
+                    const label = checkbox.nextElementSibling;
+                    label.textContent = data.text;
+                    if (data.checked) {
+                        label.classList.add('completed');
+                    } else {
+                        label.classList.remove('completed');
+                    }
                 }
             });
 
-            return div;
+            checkbox.addEventListener('change', function() {
+                set(taskRef, { text: checkbox.nextElementSibling.textContent, checked: this.checked });
+                if (this.checked) {
+                    this.nextElementSibling.classList.add('completed');
+                } else {
+                    this.nextElementSibling.classList.remove('completed');
+                }
+            });
         }
 
-        // Function to delete a task
-        window.deleteTask = function(taskId) {
-            remove(ref(database, 'checklist/' + taskId));
-        }
-
-        // Load and sync tasks
-        onValue(checklistRef, (snapshot) => {
-            const checklistContainer = document.getElementById('checklist-container');
-            checklistContainer.innerHTML = '';
-            const tasks = snapshot.val();
-            
-            if (tasks) {
-                Object.entries(tasks).forEach(([taskId, taskData]) => {
-                    const taskElement = createTaskElement(taskId, taskData);
-                    checklistContainer.appendChild(taskElement);
-                });
-            }
-        });
-
-        // Handle Enter key for adding tasks
-        document.getElementById('new-task-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addTask();
-            }
+        // Načtení všech úkolů při startu
+        const tasksRef = ref(database, 'checklist');
+        onValue(tasksRef, snapshot => {
+            const checklistItems = document.getElementById('checklist-items');
+            checklistItems.innerHTML = '';
+            snapshot.forEach(childSnapshot => {
+                const taskId = childSnapshot.key;
+                const taskData = childSnapshot.val();
+                const newItem = document.createElement('div');
+                newItem.className = 'checklist-item';
+                newItem.innerHTML = `<input type="checkbox" id="${taskId}"><label for="${taskId}">${taskData.text}</label><button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>`;
+                checklistItems.appendChild(newItem);
+                setupCheckbox(taskId);
+            });
         });
     </script>
 </body>
