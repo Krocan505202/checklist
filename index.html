@@ -158,6 +158,7 @@
             <button id="login-btn" class="auth-btn login">Přihlásit se Google</button>
             <button id="logout-btn" class="auth-btn logout" style="display:none;">Odhlásit se</button>
             <p id="user-info"></p>
+            <p id="contact-info" style="text-align: center; color: #2c3e50;">For more information about this project, please contact us at: <a href="mailto:vojtech.krocanek@gmail.com">info@example.com</a></p>
 
             <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
@@ -191,37 +192,36 @@
         const loginBtn = document.getElementById("login-btn");
         const logoutBtn = document.getElementById("logout-btn");
         const userInfo = document.getElementById("user-info");
+        const contactInfo = document.getElementById("contact-info");
         const taskControls = document.getElementById("task-controls");
         const checklistItems = document.getElementById("checklist-items");
 
-       
         loginBtn.onclick = () => {
             signInWithPopup(auth, provider).catch(err => alert("Chyba: " + err.message));
         };
 
-        
         logoutBtn.onclick = () => {
             signOut(auth);
         };
 
-    
         onAuthStateChanged(auth, user => {
             if (user) {
                 loginBtn.style.display = "none";
                 logoutBtn.style.display = "inline-block";
                 userInfo.textContent = "Přihlášen jako: " + user.displayName;
+                contactInfo.style.display = "none";
                 taskControls.style.display = "block";
                 loadTasks();
             } else {
                 loginBtn.style.display = "inline-block";
                 logoutBtn.style.display = "none";
                 userInfo.textContent = "";
+                contactInfo.style.display = "block";
                 taskControls.style.display = "none";
                 checklistItems.innerHTML = "";
             }
         });
 
-        
         window.addTask = function() {
             const newTaskInput = document.getElementById('new-task');
             const taskText = newTaskInput.value.trim();
@@ -235,7 +235,6 @@
             newTaskInput.value = '';
         };
 
-        
         window.editTask = function(taskId, currentText) {
             const newText = prompt("Upravit úkol:", currentText);
             if (newText && newText.trim() !== '') {
@@ -247,7 +246,6 @@
             }
         };
 
-       
         window.addSubtask = function(taskId) {
             const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
             const subtaskText = subtaskInput.value.trim();
@@ -264,13 +262,11 @@
             remove(taskRef);
         };
 
-        
         window.deleteSubtask = function(taskId, subtaskId) {
             const subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
             remove(subtaskRef);
         };
 
-     
         function setupCheckbox(taskId) {
             const checkbox = document.getElementById(taskId);
             const taskRef = ref(database, 'checklist/' + taskId);
@@ -295,7 +291,6 @@
             });
         }
 
-        // Načtení úkolů
         function loadTasks() {
             const tasksRef = ref(database, 'checklist');
             onValue(tasksRef, snapshot => {
@@ -339,6 +334,6 @@
             });
         }
     </script>
-<p style="text-align: center">© 2025 Vojtěch Kocan | Checklist</p>
+    <p style="text-align: center">© 2025 Vojtěch Kocan | Checklist</p>
 </body>
 </html>
