@@ -26,6 +26,7 @@ const taskControls = document.getElementById("task-controls");
 const checklistControls = document.getElementById("checklist-controls");
 const checklistSelect = document.getElementById("checklist-select");
 const checklistItems = document.getElementById("checklist-items");
+const deleteChecklistBtn = document.getElementById("delete-checklist-btn");
 
 let currentChecklistId = "automatizace"; // Výchozí je "Automatizace"
 
@@ -49,7 +50,7 @@ onAuthStateChanged(auth, user => {
         contactInfo.style.display = "none";
         taskControls.style.display = "block";
         checklistControls.style.display = "block";
-        loadChecklists(user.uid);
+        loadChecklists();
         loadTasks();
     } else {
         console.log("Uživatel odhlášen");
@@ -62,6 +63,7 @@ onAuthStateChanged(auth, user => {
         checklistSelect.innerHTML = '<option value="automatizace">Automatizace</option>';
         checklistItems.innerHTML = "";
         currentChecklistId = "automatizace";
+        deleteChecklistBtn.style.display = "none";
     }
 });
 
@@ -71,13 +73,8 @@ window.createNewChecklist = function() {
         alert("Název checklistu nemůže být prázdný!");
         return;
     }
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
-        return;
-    }
     const checklistId = `checklist-${Date.now()}`;
-    const checklistRef = ref(database, `checklists/${user.uid}/metadata/${checklistId}`);
+    const checklistRef = ref(database, `checklist/metadata/${checklistId}`);
     console.log("Vytvářím nový checklist:", checklistId, checklistName);
     set(checklistRef, { name: checklistName.trim() })
         .then(() => {
@@ -90,28 +87,29 @@ window.createNewChecklist = function() {
         });
 };
 
-window.openDailyChecklist = function() {
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
+window.deleteChecklist = function() {
+    if (currentChecklistId === "automatizace") {
+        alert("Checklist 'Automatizace' nelze smazat!");
         return;
     }
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const checklistId = `daily-${today}`;
-    const checklistRef = ref(database, `checklists/${user.uid}/metadata/${checklistId}`);
-    console.log("Otevírám denní checklist:", checklistId);
-    onValue(checklistRef, snapshot => {
-        if (!snapshot.exists()) {
-            console.log("Vytvářím nový denní checklist:", checklistId);
-            set(checklistRef, { name: `Denní - ${today}` })
-                .then(() => {
-                    switchChecklist(checklistId);
-                })
-                .catch(err => console.error("Chyba při vytváření denního checklistu:", err));
-        } else {
-            switchChecklist(checklistId);
-        }
-    }, { onlyOnce: true });
+    if (!confirm(`Opravdu chcete smazat checklist '${checklistSelect.selectedOptions[0].text}'?`)) {
+        return;
+    }
+    const checklistRef = ref(database, `checklist/${currentChecklistId}`);
+    const metadataRef = ref(database, `checklist/metadata/${currentChecklistId}`);
+    console.log("Mažu checklist:", currentChecklistId);
+    Promise.all([
+        remove(checklistRef),
+        remove(metadataRef)
+    ])
+        .then(() => {
+            console.log("Checklist úspěšně smazán:", currentChecklistId);
+            switchChecklist("automatizace");
+        })
+        .catch(err => {
+            console.error("Chyba při mazání checklistu:", err);
+            alert("Chyba při mazání checklistu: " + err.message);
+        });
 };
 
 window.switchChecklist = function(checklistId) {
@@ -121,13 +119,14 @@ window.switchChecklist = function(checklistId) {
     }
     console.log("Přepínám na checklist:", checklistId);
     currentChecklistId = checklistId;
+    deleteChecklistBtn.style.display = checklistId === "automatizace" ? "none" : "inline-block";
     loadTasks();
     updateChecklistSelect();
 };
 
-function loadChecklists(userId) {
-    const checklistsRef = ref(database, `checklists/${userId}/metadata`);
-    console.log("Načítám checklisty pro uživatele:", userId);
+function loadChecklists() {
+    const checklistsRef = ref(database, `checklist/metadata`);
+    console.log("Načítám checklisty");
     onValue(checklistsRef, snapshot => {
         checklistSelect.innerHTML = '<option value="automatizace">Automatizace</option>';
         if (snapshot.exists()) {
@@ -161,17 +160,7 @@ window.addTask = function() {
         console.log("Prázdný úkol nebo žádný checklist nevybrán");
         return;
     }
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
-        return;
-    }
-    let tasksRef;
-    if (currentChecklistId === "automatizace") {
-        tasksRef = ref(database, 'checklist');
-    } else {
-        tasksRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks`);
-    }
+    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
     const newTaskRef = push(tasksRef);
     const newTaskId = newTaskRef.key;
     console.log("Přidávám úkol:", taskText, "do checklistu:", currentChecklistId);
@@ -185,17 +174,7 @@ window.addTask = function() {
 window.editTask = function(taskId, currentText) {
     const newText = prompt("Upravit úkol:", currentText);
     if (newText && newText.trim() !== '') {
-        const user = auth.currentUser;
-        if (!user) {
-            console.error("Žádný přihlášený uživatel");
-            return;
-        }
-        let taskRef;
-        if (currentChecklistId === "automatizace") {
-            taskRef = ref(database, `checklist/${taskId}`);
-        } else {
-            taskRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks/${taskId}`);
-        }
+        const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
         onValue(taskRef, snapshot => {
             const taskData = snapshot.val();
             set(taskRef, { ...taskData, text: newText.trim() })
@@ -211,17 +190,7 @@ window.addSubtask = function(taskId) {
         console.log("Prázdný podúkol nebo žádný checklist nevybrán");
         return;
     }
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
-        return;
-    }
-    let subtaskRef;
-    if (currentChecklistId === "automatizace") {
-        subtaskRef = ref(database, `checklist/${taskId}/subtasks`);
-    } else {
-        subtaskRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks/${taskId}/subtasks`);
-    }
+    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
     const newSubtaskRef = push(subtaskRef);
     set(newSubtaskRef, { text: subtaskText, checked: false })
         .then(() => {
@@ -231,47 +200,20 @@ window.addSubtask = function(taskId) {
 };
 
 window.deleteTask = function(taskId) {
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
-        return;
-    }
-    let taskRef;
-    if (currentChecklistId === "automatizace") {
-        taskRef = ref(database, `checklist/${taskId}`);
-    } else {
-        taskRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks/${taskId}`);
-    }
+    const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
     console.log("Mažu úkol:", taskId, "z checklistu:", currentChecklistId);
     remove(taskRef).catch(err => console.error("Chyba při mazání úkolu:", err));
 };
 
 window.deleteSubtask = function(taskId, subtaskId) {
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
-        return;
-    }
-    let subtaskRef;
-    if (currentChecklistId === "automatizace") {
-        subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
-    } else {
-        subtaskRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
-    }
+    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
     console.log("Mažu podúkol:", subtaskId, "z úkolu:", taskId);
     remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
 };
 
 function setupCheckbox(taskId) {
     const checkbox = document.getElementById(taskId);
-    const user = auth.currentUser;
-    if (!user) return;
-    let taskRef;
-    if (currentChecklistId === "automatizace") {
-        taskRef = ref(database, `checklist/${taskId}`);
-    } else {
-        taskRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks/${taskId}`);
-    }
+    const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
     checkbox.addEventListener('change', function() {
         onValue(taskRef, snapshot => {
             const taskData = snapshot.val();
@@ -283,14 +225,7 @@ function setupCheckbox(taskId) {
 
 function setupSubtaskCheckbox(taskId, subtaskId) {
     const checkbox = document.getElementById(subtaskId);
-    const user = auth.currentUser;
-    if (!user) return;
-    let subtaskRef;
-    if (currentChecklistId === "automatizace") {
-        subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
-    } else {
-        subtaskRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
-    }
+    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
     checkbox.addEventListener('change', function() {
         onValue(subtaskRef, snapshot => {
             const subtaskData = snapshot.val();
@@ -306,17 +241,7 @@ function loadTasks() {
         checklistItems.innerHTML = '';
         return;
     }
-    const user = auth.currentUser;
-    if (!user) {
-        console.error("Žádný přihlášený uživatel");
-        return;
-    }
-    let tasksRef;
-    if (currentChecklistId === "automatizace") {
-        tasksRef = ref(database, 'checklist');
-    } else {
-        tasksRef = ref(database, `checklists/${user.uid}/${currentChecklistId}/tasks`);
-    }
+    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
     console.log("Načítám úkoly pro checklist:", currentChecklistId);
     onValue(tasksRef, snapshot => {
         checklistItems.innerHTML = '';
