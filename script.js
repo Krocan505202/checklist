@@ -9,7 +9,7 @@ const firebaseConfig = {
     projectId: "checklist-3aaa2",
     storageBucket: "checklist-3aaa2.appspot.com",
     messagingSenderId: "315001625337",
-    appId: "1:315001625337:web:10d787a6c1440437166028",
+    appId: "1:315001625337:web:10d087a6c1440437166028",
     measurementId: "G-CX7TCLZDN3"
 };
 
@@ -107,7 +107,6 @@ window.deleteChecklist = function() {
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
             checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
-            // Jen načti checklisty, ale neautomaticky nepřepínej ani nevytvářej nový
             loadChecklists();
         })
         .catch(err => {
@@ -146,10 +145,8 @@ function loadChecklists() {
                 if (checklistId === currentChecklistId) option.selected = true;
                 checklistSelect.appendChild(option);
             });
-            // ŽÁDNÉ automatické přepnutí na první checklist – nech uživatele vybrat ručně
         } else {
             console.log("Žádné checklisty nenalezeny – aplikace zůstane prázdná");
-            // ŽÁDNÉ vytváření nového výchozího checklistu
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
@@ -204,6 +201,7 @@ window.addSubtask = function(taskId) {
     set(newSubtaskRef, { text: subtaskText, checked: false })
         .then(() => {
             subtaskInput.value = '';
+            toggleSubtaskMenu(taskId, true); // Keep menu open after adding subtask
         })
         .catch(err => console.error("Chyba při přidávání podúkolu:", err));
 };
@@ -218,6 +216,12 @@ window.deleteSubtask = function(taskId, subtaskId) {
     const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
     console.log("Mažu podúkol:", subtaskId, "z úkolu:", taskId);
     remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
+};
+
+window.toggleSubtaskMenu = function(taskId) {
+    const subtaskMenu = document.getElementById(`subtask-menu-${taskId}`);
+    const isHidden = subtaskMenu.style.display === 'none';
+    subtaskMenu.style.display = isHidden ? 'block' : 'none';
 };
 
 function setupCheckbox(taskId) {
@@ -258,6 +262,7 @@ function loadTasks() {
             snapshot.forEach(childSnapshot => {
                 const taskId = childSnapshot.key;
                 const taskData = childSnapshot.val();
+                const hasSubtasks = taskData.subtasks && Object.keys(taskData.subtasks).length > 0;
                 const newItem = document.createElement('div');
                 newItem.className = 'checklist-item';
                 newItem.innerHTML = `
@@ -266,12 +271,15 @@ function loadTasks() {
                         <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
                         <button class="edit-btn" onclick="editTask('${taskId}', '${taskData.text}')">Upravit</button>
                         <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>
+                        <button class="toggle-subtask-btn" onclick="toggleSubtaskMenu('${taskId}')">${hasSubtasks ? '▼' : '▶'} Podúkoly</button>
                     </div>
-                    <div class="add-subtask">
-                        <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
-                        <button onclick="addSubtask('${taskId}')">Přidat podúkol</button>
+                    <div class="subtask-menu" id="subtask-menu-${taskId}" style="display: ${hasSubtasks ? 'block' : 'none'};">
+                        <div class="add-subtask" id="add-subtask-${taskId}">
+                            <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
+                            <button onclick="addSubtask('${taskId}')">Přidat podúkol</button>
+                        </div>
+                        <div class="subtask-list" id="subtask-list-${taskId}"></div>
                     </div>
-                    <div class="subtask-list" id="subtask-list-${taskId}"></div>
                 `;
                 checklistItems.appendChild(newItem);
                 setupCheckbox(taskId);
