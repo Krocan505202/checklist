@@ -20,7 +20,9 @@
                     <option value="">Vyberte checklist</option>
                 </select>
                 <button onclick="createNewChecklist()">Nový checklist</button>
+                <button id="rename-checklist-btn" onclick="renameChecklist()">Přejmenovat checklist</button>
                 <button onclick="deleteChecklist()" id="delete-checklist-btn" style="display:none;">Smazat checklist</button>
+                
             </div>
             <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
