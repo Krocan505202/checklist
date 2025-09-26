@@ -63,7 +63,7 @@ onAuthStateChanged(auth, user => {
         checklistSelect.innerHTML = '<option value="automatizace">Automatizace</option>';
         checklistItems.innerHTML = "";
         currentChecklistId = "automatizace";
-        deleteChecklistBtn.style.display = "none";
+        deleteChecklistBtn.style.display = "inline-block";
     }
 });
 
@@ -100,9 +100,19 @@ window.deleteChecklist = function() {
     ])
         .then(() => {
             console.log("Checklist úspěšně smazán:", currentChecklistId);
-            currentChecklistId = "automatizace"; // Přepnout zpět na výchozí, pokud byl smazán
-            loadChecklists();
-            loadTasks();
+            // Najít jiný checklist nebo vytvořit nový výchozí
+            const checklistsRef = ref(database, `checklist/metadata`);
+            onValue(checklistsRef, snapshot => {
+                if (snapshot.exists()) {
+                    const firstChecklistId = Object.keys(snapshot.val())[0];
+                    switchChecklist(firstChecklistId);
+                } else {
+                    // Pokud žádné checklisty nejsou, vytvořit nový "Automatizace"
+                    set(ref(database, `checklist/metadata/automatizace`), { name: "Automatizace" })
+                        .then(() => switchChecklist("automatizace"))
+                        .catch(err => console.error("Chyba při vytváření výchozího checklistu:", err));
+                }
+            }, { onlyOnce: true });
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -117,7 +127,7 @@ window.switchChecklist = function(checklistId) {
     }
     console.log("Přepínám na checklist:", checklistId);
     currentChecklistId = checklistId;
-    deleteChecklistBtn.style.display = "inline-block"; // Vždy zobrazit, protože teď lze smazat i automatizaci
+    deleteChecklistBtn.style.display = "inline-block"; // Vždy zobrazené, protože můžeme mazat i Automatizaci
     loadTasks();
     updateChecklistSelect();
 };
@@ -126,19 +136,36 @@ function loadChecklists() {
     const checklistsRef = ref(database, `checklist/metadata`);
     console.log("Načítám checklisty");
     onValue(checklistsRef, snapshot => {
-        checklistSelect.innerHTML = '<option value="automatizace">Automatizace</option>';
-        if (snapshot.exists()) {
+        checklistSelect.innerHTML = '';
+        if (!snapshot.exists()) {
+            console.log("Žádné checklisty nenalezeny, vytvářím výchozí Automatizace");
+            set(ref(database, `checklist/metadata/automatizace`), { name: "Automatizace" })
+                .then(() => {
+                    checklistSelect.innerHTML = '<option value="automatizace">Automatizace</option>';
+                    switchChecklist("automatizace");
+                });
+        } else {
+            let hasAutomatizace = false;
             snapshot.forEach(childSnapshot => {
                 const checklistId = childSnapshot.key;
                 const checklistData = childSnapshot.val();
+                if (checklistId === "automatizace") hasAutomatizace = true;
                 const option = document.createElement('option');
                 option.value = checklistId;
                 option.textContent = checklistData.name;
                 if (checklistId === currentChecklistId) option.selected = true;
                 checklistSelect.appendChild(option);
             });
-        } else {
-            console.log("Žádné další checklisty nenalezeny");
+            if (!hasAutomatizace) {
+                console.log("Automatizace nenalezena, přidávám do metadat");
+                set(ref(database, `checklist/metadata/automatizace`), { name: "Automatizace" })
+                    .then(() => {
+                        const option = document.createElement('option');
+                        option.value = "automatizace";
+                        option.textContent = "Automatizace";
+                        checklistSelect.appendChild(option);
+                    });
+            }
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
@@ -212,118 +239,4 @@ window.addSubtask = function(taskId) {
         .catch(err => console.error("Chyba při přidávání podúkolu:", err));
 };
 
-window.deleteTask = function(taskId) {
-    let taskRef;
-    if (currentChecklistId === "automatizace") {
-        taskRef = ref(database, `checklist/${taskId}`);
-    } else {
-        taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
-    }
-    console.log("Mažu úkol:", taskId, "z checklistu:", currentChecklistId);
-    remove(taskRef).catch(err => console.error("Chyba při mazání úkolu:", err));
-};
-
-window.deleteSubtask = function(taskId, subtaskId) {
-    let subtaskRef;
-    if (currentChecklistId === "automatizace") {
-        subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
-    } else {
-        subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
-    }
-    console.log("Mažu podúkol:", subtaskId, "z úkolu:", taskId);
-    remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
-};
-
-function setupCheckbox(taskId) {
-    const checkbox = document.getElementById(taskId);
-    let taskRef;
-    if (currentChecklistId === "automatizace") {
-        taskRef = ref(database, `checklist/${taskId}`);
-    } else {
-        taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
-    }
-    checkbox.addEventListener('change', function() {
-        onValue(taskRef, snapshot => {
-            const taskData = snapshot.val();
-            set(taskRef, { ...taskData, checked: this.checked })
-                .catch(err => console.error("Chyba při změně stavu úkolu:", err));
-        }, { onlyOnce: true });
-    });
-}
-
-function setupSubtaskCheckbox(taskId, subtaskId) {
-    const checkbox = document.getElementById(subtaskId);
-    let subtaskRef;
-    if (currentChecklistId === "automatizace") {
-        subtaskRef = ref(database, `checklist/${taskId}/subtasks/${subtaskId}`);
-    } else {
-        subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
-    }
-    checkbox.addEventListener('change', function() {
-        onValue(subtaskRef, snapshot => {
-            const subtaskData = snapshot.val();
-            set(subtaskRef, { ...subtaskData, checked: this.checked })
-                .catch(err => console.error("Chyba při změně stavu podúkolu:", err));
-        }, { onlyOnce: true });
-    });
-}
-
-function loadTasks() {
-    if (!currentChecklistId) {
-        console.log("Žádný checklist nevybrán, čistím seznam úkolů");
-        checklistItems.innerHTML = '';
-        return;
-    }
-    let tasksRef;
-    if (currentChecklistId === "automatizace") {
-        tasksRef = ref(database, 'checklist');
-    } else {
-        tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
-    }
-    console.log("Načítám úkoly pro checklist:", currentChecklistId);
-    onValue(tasksRef, snapshot => {
-        checklistItems.innerHTML = '';
-        if (snapshot.exists()) {
-            snapshot.forEach(childSnapshot => {
-                const taskId = childSnapshot.key;
-                const taskData = childSnapshot.val();
-                const newItem = document.createElement('div');
-                newItem.className = 'checklist-item';
-                newItem.innerHTML = `
-                    <div class="task-header">
-                        <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
-                        <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
-                        <button class="edit-btn" onclick="editTask('${taskId}', '${taskData.text}')">Upravit</button>
-                        <button class="delete-btn" onclick="deleteTask('${taskId}')">Smazat</button>
-                    </div>
-                    <div class="add-subtask">
-                        <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
-                        <button onclick="addSubtask('${taskId}')">Přidat podúkol</button>
-                    </div>
-                    <div class="subtask-list" id="subtask-list-${taskId}"></div>
-                `;
-                checklistItems.appendChild(newItem);
-                setupCheckbox(taskId);
-
-                if (taskData.subtasks) {
-                    const subtaskList = document.getElementById(`subtask-list-${taskId}`);
-                    Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
-                        const subtaskItem = document.createElement('div');
-                        subtaskItem.className = 'subtask-item';
-                        subtaskItem.innerHTML = `
-                            <input type="checkbox" id="${subtaskId}" ${subtaskData.checked ? "checked" : ""}>
-                            <label for="${subtaskId}" class="${subtaskData.checked ? "completed" : ""}">${subtaskData.text}</label>
-                            <button class="delete-btn" onclick="deleteSubtask('${taskId}', '${subtaskId}')">Smazat</button>
-                        `;
-                        subtaskList.appendChild(subtaskItem);
-                        setupSubtaskCheckbox(taskId, subtaskId);
-                    });
-                }
-            });
-        } else {
-            console.log("Žádné úkoly v checklistu:", currentChecklistId);
-        }
-    }, err => {
-        console.error("Chyba při načítání úkolů:", err);
-    });
-}
+window
