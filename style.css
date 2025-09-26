@@ -78,7 +78,7 @@ header {
     color: #888;
 }
 
-.delete-btn, .edit-btn, .toggle-subtask-btn {
+.delete-btn, .edit-btn, .toggle-subtask-btn, .checklist-control-btn {
     margin-left: 0.5em;
     padding: 0.3em 0.6em;
     border: none;
@@ -113,6 +113,16 @@ header {
 
 .toggle-subtask-btn:hover {
     background-color: #e0e0e0;
+}
+
+.checklist-control-btn {
+    background-color: #2c3e50;
+    color: white;
+    padding: 0.5em 1em;
+}
+
+.checklist-control-btn:hover {
+    background-color: #34495e;
 }
 
 .add-task, .add-subtask {
@@ -163,6 +173,21 @@ header {
     color: white;
 }
 
+#checklist-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+#checklist-select {
+    padding: 0.5em;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background-color: white;
+}
+
 @media (max-width: 600px) {
     .container {
         margin: 1em;
@@ -182,7 +207,18 @@ header {
         flex-wrap: wrap;
     }
 
-    .delete-btn, .edit-btn, .toggle-subtask-btn {
+    .delete-btn, .edit-btn, .toggle-subtask-btn, .checklist-control-btn {
         margin-top: 0.5em;
+    }
+
+    #checklist-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #checklist-controls select,
+    #checklist-controls button {
+        width: 100%;
+        margin-bottom: 0.5em;
     }
 }
