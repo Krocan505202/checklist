@@ -107,6 +107,7 @@ window.deleteChecklist = function() {
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
             checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
+            // Jen načti checklisty, ale neautomaticky nepřepínej ani nevytvářej nový
             loadChecklists();
         })
         .catch(err => {
@@ -145,12 +146,10 @@ function loadChecklists() {
                 if (checklistId === currentChecklistId) option.selected = true;
                 checklistSelect.appendChild(option);
             });
-            if (!currentChecklistId) {
-                const firstChecklistId = Object.keys(snapshot.val())[0];
-                switchChecklist(firstChecklistId);
-            }
+            // ŽÁDNÉ automatické přepnutí na první checklist – nech uživatele vybrat ručně
         } else {
-            console.log("Žádné checklisty nenalezeny");
+            console.log("Žádné checklisty nenalezeny – aplikace zůstane prázdná");
+            // ŽÁDNÉ vytváření nového výchozího checklistu
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
