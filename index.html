@@ -19,10 +19,9 @@
                 <select id="checklist-select" onchange="switchChecklist(this.value)">
                     <option value="">Vyberte checklist</option>
                 </select>
-                <button onclick="createNewChecklist()">Nový checklist</button>
-                <button id="rename-checklist-btn" onclick="renameChecklist()">Přejmenovat checklist</button>
-                <button onclick="deleteChecklist()" id="delete-checklist-btn" style="display:none;">Smazat checklist</button>
-                
+                <button class="checklist-control-btn" onclick="createNewChecklist()">Nový checklist</button>
+                <button class="checklist-control-btn" id="rename-checklist-btn" onclick="renameChecklist()">Přejmenovat checklist</button>
+                <button class="checklist-control-btn" onclick="deleteChecklist()" id="delete-checklist-btn" style="display:none;">Smazat checklist</button>
             </div>
             <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
@@ -31,7 +30,7 @@
             <div id="checklist-items"></div>
         </section>
     </div>
-    <script type="module" src="script.js"></script>
     <p style="text-align: center">© 2025 Vojtěch Kocan | Checklist</p>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
