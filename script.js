@@ -103,20 +103,11 @@ window.deleteChecklist = function() {
     ])
         .then(() => {
             console.log("Checklist úspěšně smazán:", currentChecklistId);
-            // Najít jiný checklist nebo vytvořit nový
-            const checklistsRef = ref(database, `checklist/metadata`);
-            onValue(checklistsRef, snapshot => {
-                if (snapshot.exists()) {
-                    const firstChecklistId = Object.keys(snapshot.val())[0];
-                    switchChecklist(firstChecklistId);
-                } else {
-                    // Vytvořit nový výchozí checklist
-                    const newChecklistId = `checklist-${Date.now()}`;
-                    set(ref(database, `checklist/metadata/${newChecklistId}`), { name: "Výchozí" })
-                        .then(() => switchChecklist(newChecklistId))
-                        .catch(err => console.error("Chyba při vytváření výchozího checklistu:", err));
-                }
-            }, { onlyOnce: true });
+            currentChecklistId = null;
+            checklistItems.innerHTML = "";
+            deleteChecklistBtn.style.display = "none";
+            checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
+            loadChecklists();
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -159,10 +150,7 @@ function loadChecklists() {
                 switchChecklist(firstChecklistId);
             }
         } else {
-            console.log("Žádné checklisty nenalezeny, vytvářím výchozí");
-            const newChecklistId = `checklist-${Date.now()}`;
-            set(ref(database, `checklist/metadata/${newChecklistId}`), { name: "Výchozí" })
-                .then(() => switchChecklist(newChecklistId));
+            console.log("Žádné checklisty nenalezeny");
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
