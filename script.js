@@ -87,6 +87,30 @@ window.createNewChecklist = function() {
         });
 };
 
+window.renameChecklist = function() {
+    if (!currentChecklistId) {
+        alert("Není vybrán žádný checklist k přejmenování!");
+        return;
+    }
+    const currentName = checklistSelect.selectedOptions[0].text;
+    const newName = prompt("Zadejte nový název checklistu:", currentName);
+    if (!newName || newName.trim() === "") {
+        alert("Název checklistu nemůže být prázdný!");
+        return;
+    }
+    const checklistRef = ref(database, `checklist/metadata/${currentChecklistId}`);
+    console.log("Přejmenovávám checklist:", currentChecklistId, "na:", newName);
+    set(checklistRef, { name: newName.trim() })
+        .then(() => {
+            console.log("Checklist úspěšně přejmenován:", currentChecklistId);
+            loadChecklists(); // Znovu načteme checklisty pro aktualizaci dropdownu
+        })
+        .catch(err => {
+            console.error("Chyba při přejmenování checklistu:", err);
+            alert("Chyba při přejmenování checklistu: " + err.message);
+        });
+};
+
 window.deleteChecklist = function() {
     if (!currentChecklistId) {
         alert("Není vybrán žádný checklist k smazání!");
