@@ -78,7 +78,8 @@ window.createNewChecklist = function() {
     set(checklistRef, { name: checklistName.trim() })
         .then(() => {
             console.log("Checklist úspěšně vytvořen:", checklistId);
-            switchChecklist(checklistId);
+            switchChecklist(checklistId); // Přepneme na nový checklist
+            loadChecklists(); // Aktualizujeme dropdown
         })
         .catch(err => {
             console.error("Chyba při vytváření checklistu:", err);
@@ -106,8 +107,7 @@ window.deleteChecklist = function() {
             currentChecklistId = null;
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
-            checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
-            loadChecklists();
+            loadChecklists(); // Znovu načteme checklisty
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -134,7 +134,8 @@ function loadChecklists() {
     const checklistsRef = ref(database, `checklist/metadata`);
     console.log("Načítám checklisty");
     onValue(checklistsRef, snapshot => {
-        checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
+        checklistSelect.innerHTML = ''; // Vymažeme obsah dropdownu
+        let firstChecklistId = null;
         if (snapshot.exists()) {
             snapshot.forEach(childSnapshot => {
                 const checklistId = childSnapshot.key;
@@ -142,11 +143,20 @@ function loadChecklists() {
                 const option = document.createElement('option');
                 option.value = checklistId;
                 option.textContent = checklistData.name;
+                if (!firstChecklistId) firstChecklistId = checklistId; // Uložíme ID prvního checklistu
                 if (checklistId === currentChecklistId) option.selected = true;
                 checklistSelect.appendChild(option);
             });
+            // Pokud není žádný checklist vybrán a existuje alespoň jeden, automaticky vybereme první
+            if (!currentChecklistId && firstChecklistId) {
+                switchChecklist(firstChecklistId);
+            }
         } else {
-            console.log("Žádné checklisty nenalezeny – aplikace zůstane prázdná");
+            // Pokud neexistují žádné checklisty, zobrazíme "Vyberte checklist"
+            checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
+            currentChecklistId = null;
+            checklistItems.innerHTML = "";
+            deleteChecklistBtn.style.display = "none";
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
@@ -201,7 +211,7 @@ window.addSubtask = function(taskId) {
     set(newSubtaskRef, { text: subtaskText, checked: false })
         .then(() => {
             subtaskInput.value = '';
-            toggleSubtaskMenu(taskId, true); // Keep menu open after adding subtask
+            toggleSubtaskMenu(taskId, true);
         })
         .catch(err => console.error("Chyba při přidávání podúkolu:", err));
 };
