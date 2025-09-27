@@ -53,7 +53,8 @@ onAuthStateChanged(auth, user => {
         contactInfo.style.display = "none";
         taskControls.style.display = "block";
         checklistControls.style.display = "block";
-        loadChecklists(true); // Otevřít seznam checklistů po přihlášení
+        loadChecklists(true); // Vždy otevřít seznam checklistů po přihlášení
+        toggleChecklistList(true); // Explicitně otevřít seznam checklistů
     } else {
         console.log("Uživatel odhlášen");
         loginBtn.style.display = "inline-block";
@@ -204,12 +205,8 @@ function loadChecklists(openList = false) {
                 loadTasks();
             }
             updateCurrentDisplay();
-            // Otevřít seznam checklistů, pokud je openList true nebo není vybrán žádný checklist
-            if (openList || !currentChecklistId) {
-                toggleChecklistList(true);
-            } else {
-                toggleChecklistList(false);
-            }
+            // Otevřít seznam checklistů, pokud je openList true
+            toggleChecklistList(openList);
         } else {
             currentChecklistId = null;
             checklistItems.innerHTML = "";
