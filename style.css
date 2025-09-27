@@ -31,51 +31,10 @@ header {
     margin-bottom: 1em;
 }
 
-.checklist-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1em 0;
-}
-
-.checklist-list-item {
-    padding: 0.5em;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    margin-bottom: 0.5em;
-    cursor: move;
-    transition: background-color 0.2s;
-}
-
-.checklist-list-item:hover {
-    background-color: #e0e0e0;
-}
-
-.checklist-list-item.dragging {
-    opacity: 0.5;
-    background-color: #d0d0d0;
-}
-
-.checklist-list-item.active {
-    background-color: #2c3e50;
-    color: white;
-}
-
 .checklist-item {
     margin-bottom: 1.5em;
     padding: 1em;
     border-bottom: 1px solid #eee;
-    transition: background-color 0.2s;
-}
-
-.checklist-item:hover {
-    background-color: #f0f0f0;
-    cursor: move;
-}
-
-.checklist-item.dragging {
-    opacity: 0.5;
-    background-color: #e0e0e0;
 }
 
 .task-header {
@@ -101,17 +60,6 @@ header {
     align-items: center;
     margin-bottom: 0.5em;
     gap: 10px;
-    transition: background-color 0.2s;
-}
-
-.subtask-item:hover {
-    background-color: #f0f0f0;
-    cursor: move;
-}
-
-.subtask-item.dragging {
-    opacity: 0.5;
-    background-color: #e0e0e0;
 }
 
 .checklist-item input[type="checkbox"],
@@ -227,10 +175,17 @@ header {
 
 #checklist-controls {
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: 10px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+#checklist-select {
+    padding: 0.5em;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background-color: white;
 }
 
 @media (max-width: 600px) {
@@ -256,6 +211,12 @@ header {
         margin-top: 0.5em;
     }
 
+    #checklist-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #checklist-controls select,
     #checklist-controls button {
         width: 100%;
         margin-bottom: 0.5em;
