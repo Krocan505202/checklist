@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, remove, push, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -29,6 +29,7 @@ const checklistItems = document.getElementById("checklist-items");
 const deleteChecklistBtn = document.getElementById("delete-checklist-btn");
 
 let currentChecklistId = null;
+let draggedItem = null;
 
 loginBtn.onclick = () => {
     signInWithPopup(auth, provider).catch(err => {
@@ -75,11 +76,11 @@ window.createNewChecklist = function() {
     const checklistId = `checklist-${Date.now()}`;
     const checklistRef = ref(database, `checklist/metadata/${checklistId}`);
     console.log("Vytvářím nový checklist:", checklistId, checklistName);
-    set(checklistRef, { name: checklistName.trim() })
+    set(checklistRef, { name: checklistName.trim(), order: Date.now() })
         .then(() => {
             console.log("Checklist úspěšně vytvořen:", checklistId);
-            switchChecklist(checklistId); // Přepneme na nový checklist
-            loadChecklists(); // Aktualizujeme dropdown
+            switchChecklist(checklistId);
+            loadChecklists();
         })
         .catch(err => {
             console.error("Chyba při vytváření checklistu:", err);
@@ -100,10 +101,10 @@ window.renameChecklist = function() {
     }
     const checklistRef = ref(database, `checklist/metadata/${currentChecklistId}`);
     console.log("Přejmenovávám checklist:", currentChecklistId, "na:", newName);
-    set(checklistRef, { name: newName.trim() })
+    set(checklistRef, { name: newName.trim(), order: checklistSelect.selectedOptions[0].dataset.order })
         .then(() => {
             console.log("Checklist úspěšně přejmenován:", currentChecklistId);
-            loadChecklists(); // Znovu načteme checklisty pro aktualizaci dropdownu
+            loadChecklists();
         })
         .catch(err => {
             console.error("Chyba při přejmenování checklistu:", err);
@@ -131,7 +132,7 @@ window.deleteChecklist = function() {
             currentChecklistId = null;
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
-            loadChecklists(); // Znovu načteme checklisty
+            loadChecklists();
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -158,26 +159,32 @@ function loadChecklists() {
     const checklistsRef = ref(database, `checklist/metadata`);
     console.log("Načítám checklisty");
     onValue(checklistsRef, snapshot => {
-        checklistSelect.innerHTML = ''; // Vymažeme obsah dropdownu
-        let firstChecklistId = null;
+        checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
+        let checklists = [];
         if (snapshot.exists()) {
             snapshot.forEach(childSnapshot => {
-                const checklistId = childSnapshot.key;
-                const checklistData = childSnapshot.val();
+                checklists.push({
+                    id: childSnapshot.key,
+                    name: childSnapshot.val().name,
+                    order: childSnapshot.val().order || 0
+                });
+            });
+            checklists.sort((a, b) => a.order - b.order);
+            checklists.forEach(checklist => {
                 const option = document.createElement('option');
-                option.value = checklistId;
-                option.textContent = checklistData.name;
-                if (!firstChecklistId) firstChecklistId = checklistId; // Uložíme ID prvního checklistu
-                if (checklistId === currentChecklistId) option.selected = true;
+                option.value = checklist.id;
+                option.textContent = checklist.name;
+                option.draggable = true;
+                option.dataset.order = checklist.order;
+                option.dataset.id = checklist.id;
+                if (checklist.id === currentChecklistId) option.selected = true;
                 checklistSelect.appendChild(option);
             });
-            // Pokud není žádný checklist vybrán a existuje alespoň jeden, automaticky vybereme první
-            if (!currentChecklistId && firstChecklistId) {
-                switchChecklist(firstChecklistId);
+            setupChecklistDragAndDrop();
+            if (!currentChecklistId && checklists.length > 0) {
+                switchChecklist(checklists[0].id);
             }
         } else {
-            // Pokud neexistují žádné checklisty, zobrazíme "Vyberte checklist"
-            checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
             currentChecklistId = null;
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
@@ -193,6 +200,52 @@ function updateChecklistSelect() {
     });
 }
 
+function setupChecklistDragAndDrop() {
+    const options = checklistSelect.querySelectorAll('option:not([value=""])');
+    options.forEach(option => {
+        option.addEventListener('dragstart', (e) => {
+            draggedItem = option;
+            e.dataTransfer.setData('text/plain', option.dataset.id);
+        });
+        option.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        option.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const draggedId = e.dataTransfer.getData('text/plain');
+            if (draggedId !== option.dataset.id) {
+                reorderChecklists(draggedId, option.dataset.id);
+            }
+        });
+    });
+}
+
+function reorderChecklists(draggedId, targetId) {
+    const checklistsRef = ref(database, `checklist/metadata`);
+    onValue(checklistsRef, snapshot => {
+        let checklists = [];
+        snapshot.forEach(childSnapshot => {
+            checklists.push({
+                id: childSnapshot.key,
+                name: childSnapshot.val().name,
+                order: childSnapshot.val().order || 0
+            });
+        });
+        checklists.sort((a, b) => a.order - b.order);
+        const draggedIndex = checklists.findIndex(c => c.id === draggedId);
+        const targetIndex = checklists.findIndex(c => c.id === targetId);
+        const [draggedChecklist] = checklists.splice(draggedIndex, 1);
+        checklists.splice(targetIndex, 0, draggedChecklist);
+        const updates = {};
+        checklists.forEach((checklist, index) => {
+            updates[`checklist/metadata/${checklist.id}/order`] = index;
+        });
+        update(ref(database), updates)
+            .then(() => console.log("Checklist order updated"))
+            .catch(err => console.error("Chyba při ukládání pořadí checklistů:", err));
+    }, { onlyOnce: true });
+}
+
 window.addTask = function() {
     const newTaskInput = document.getElementById('new-task');
     const taskText = newTaskInput.value.trim();
@@ -204,7 +257,7 @@ window.addTask = function() {
     const newTaskRef = push(tasksRef);
     const newTaskId = newTaskRef.key;
     console.log("Přidávám úkol:", taskText, "do checklistu:", currentChecklistId);
-    set(newTaskRef, { text: taskText, checked: false, subtasks: {} })
+    set(newTaskRef, { text: taskText, checked: false, subtasks: {}, order: Date.now() })
         .then(() => {
             newTaskInput.value = '';
         })
@@ -232,7 +285,7 @@ window.addSubtask = function(taskId) {
     }
     const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
     const newSubtaskRef = push(subtaskRef);
-    set(newSubtaskRef, { text: subtaskText, checked: false })
+    set(newSubtaskRef, { text: subtaskText, checked: false, order: Date.now() })
         .then(() => {
             subtaskInput.value = '';
             toggleSubtaskMenu(taskId, true);
@@ -252,10 +305,10 @@ window.deleteSubtask = function(taskId, subtaskId) {
     remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
 };
 
-window.toggleSubtaskMenu = function(taskId) {
+window.toggleSubtaskMenu = function(taskId, forceOpen = false) {
     const subtaskMenu = document.getElementById(`subtask-menu-${taskId}`);
     const isHidden = subtaskMenu.style.display === 'none';
-    subtaskMenu.style.display = isHidden ? 'block' : 'none';
+    subtaskMenu.style.display = (isHidden || forceOpen) ? 'block' : 'none';
 };
 
 function setupCheckbox(taskId) {
@@ -282,6 +335,92 @@ function setupSubtaskCheckbox(taskId, subtaskId) {
     });
 }
 
+function setupTaskDragAndDrop(taskElement, taskId) {
+    taskElement.draggable = true;
+    taskElement.addEventListener('dragstart', (e) => {
+        draggedItem = taskElement;
+        e.dataTransfer.setData('text/plain', taskId);
+    });
+    taskElement.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+    taskElement.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId !== taskId) {
+            reorderTasks(draggedId, taskId);
+        }
+    });
+}
+
+function reorderTasks(draggedId, targetId) {
+    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
+    onValue(tasksRef, snapshot => {
+        let tasks = [];
+        snapshot.forEach(childSnapshot => {
+            tasks.push({
+                id: childSnapshot.key,
+                data: childSnapshot.val()
+            });
+        });
+        tasks.sort((a, b) => (a.data.order || 0) - (b.data.order || 0));
+        const draggedIndex = tasks.findIndex(t => t.id === draggedId);
+        const targetIndex = tasks.findIndex(t => t.id === targetId);
+        const [draggedTask] = tasks.splice(draggedIndex, 1);
+        tasks.splice(targetIndex, 0, draggedTask);
+        const updates = {};
+        tasks.forEach((task, index) => {
+            updates[`checklist/${currentChecklistId}/tasks/${task.id}/order`] = index;
+        });
+        update(ref(database), updates)
+            .then(() => console.log("Task order updated"))
+            .catch(err => console.error("Chyba při ukládání pořadí úkolů:", err));
+    }, { onlyOnce: true });
+}
+
+function setupSubtaskDragAndDrop(subtaskElement, taskId, subtaskId) {
+    subtaskElement.draggable = true;
+    subtaskElement.addEventListener('dragstart', (e) => {
+        draggedItem = subtaskElement;
+        e.dataTransfer.setData('text/plain', `${taskId}/${subtaskId}`);
+    });
+    subtaskElement.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+    subtaskElement.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const [draggedTaskId, draggedSubtaskId] = e.dataTransfer.getData('text/plain').split('/');
+        if (draggedTaskId === taskId && draggedSubtaskId !== subtaskId) {
+            reorderSubtasks(taskId, draggedSubtaskId, subtaskId);
+        }
+    });
+}
+
+function reorderSubtasks(taskId, draggedId, targetId) {
+    const subtasksRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
+    onValue(subtasksRef, snapshot => {
+        let subtasks = [];
+        snapshot.forEach(childSnapshot => {
+            subtasks.push({
+                id: childSnapshot.key,
+                data: childSnapshot.val()
+            });
+        });
+        subtasks.sort((a, b) => (a.data.order || 0) - (b.data.order || 0));
+        const draggedIndex = subtasks.findIndex(s => s.id === draggedId);
+        const targetIndex = subtasks.findIndex(s => s.id === targetId);
+        const [draggedSubtask] = subtasks.splice(draggedIndex, 1);
+        subtasks.splice(targetIndex, 0, draggedSubtask);
+        const updates = {};
+        subtasks.forEach((subtask, index) => {
+            updates[`checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtask.id}/order`] = index;
+        });
+        update(ref(database), updates)
+            .then(() => console.log("Subtask order updated"))
+            .catch(err => console.error("Chyba při ukládání pořadí podúkolů:", err));
+    }, { onlyOnce: true });
+}
+
 function loadTasks() {
     if (!currentChecklistId) {
         console.log("Žádný checklist nevybrán, čistím seznam úkolů");
@@ -293,9 +432,17 @@ function loadTasks() {
     onValue(tasksRef, snapshot => {
         checklistItems.innerHTML = '';
         if (snapshot.exists()) {
+            let tasks = [];
             snapshot.forEach(childSnapshot => {
-                const taskId = childSnapshot.key;
-                const taskData = childSnapshot.val();
+                tasks.push({
+                    id: childSnapshot.key,
+                    data: childSnapshot.val()
+                });
+            });
+            tasks.sort((a, b) => (a.data.order || 0) - (b.data.order || 0));
+            tasks.forEach(task => {
+                const taskId = task.id;
+                const taskData = task.data;
                 const hasSubtasks = taskData.subtasks && Object.keys(taskData.subtasks).length > 0;
                 const newItem = document.createElement('div');
                 newItem.className = 'checklist-item';
@@ -317,10 +464,18 @@ function loadTasks() {
                 `;
                 checklistItems.appendChild(newItem);
                 setupCheckbox(taskId);
+                setupTaskDragAndDrop(newItem, taskId);
 
                 if (taskData.subtasks) {
                     const subtaskList = document.getElementById(`subtask-list-${taskId}`);
+                    let subtasks = [];
                     Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
+                        subtasks.push({ id: subtaskId, data: subtaskData });
+                    });
+                    subtasks.sort((a, b) => (a.data.order || 0) - (b.data.order || 0));
+                    subtasks.forEach(subtask => {
+                        const subtaskId = subtask.id;
+                        const subtaskData = subtask.data;
                         const subtaskItem = document.createElement('div');
                         subtaskItem.className = 'subtask-item';
                         subtaskItem.innerHTML = `
@@ -330,6 +485,7 @@ function loadTasks() {
                         `;
                         subtaskList.appendChild(subtaskItem);
                         setupSubtaskCheckbox(taskId, subtaskId);
+                        setupSubtaskDragAndDrop(subtaskItem, taskId, subtaskId);
                     });
                 }
             });
