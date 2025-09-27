@@ -213,10 +213,13 @@ async function updateChecklistOrder() {
 }
 
 async function addTask() {
+    console.log("Spouštím addTask, currentChecklistId:", currentChecklistId);
     const newTaskInput = document.getElementById('new-task');
     const taskText = newTaskInput.value.trim();
+    console.log("Task text:", taskText);
     if (taskText === '' || !currentChecklistId) {
         console.log("Prázdný úkol nebo žádný checklist nevybrán");
+        alert("Vyberte checklist nebo zadejte text úkolu!");
         return;
     }
     const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
@@ -231,8 +234,12 @@ async function addTask() {
     set(newTaskRef, { text: taskText, checked: false, subtasks: {}, order: newOrder })
         .then(() => {
             newTaskInput.value = '';
+            loadTasks(); // Ruční aktualizace UI pro jistotu
         })
-        .catch(err => console.error("Chyba při přidávání úkolu:", err));
+        .catch(err => {
+            console.error("Chyba při přidávání úkolu:", err);
+            alert("Chyba při přidávání úkolu: " + err.message);
+        });
 };
 
 window.editTask = function(taskId, currentText) {
@@ -248,10 +255,17 @@ window.editTask = function(taskId, currentText) {
 };
 
 async function addSubtask(taskId) {
+    console.log("Spouštím addSubtask pro taskId:", taskId);
     const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
+    if (!subtaskInput) {
+        console.error("Input pro podúkol nenalezen:", `subtask-input-${taskId}`);
+        return;
+    }
     const subtaskText = subtaskInput.value.trim();
+    console.log("Subtask text:", subtaskText);
     if (subtaskText === '' || !currentChecklistId) {
         console.log("Prázdný podúkol nebo žádný checklist nevybrán");
+        alert("Zadejte text podúkolu!");
         return;
     }
     const subtasksRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
@@ -264,9 +278,13 @@ async function addSubtask(taskId) {
     set(newSubtaskRef, { text: subtaskText, checked: false, order: newOrder })
         .then(() => {
             subtaskInput.value = '';
-            toggleSubtaskMenu(taskId, true);
+            toggleSubtaskMenu(taskId, true); // Otevřeme menu po přidání
+            loadTasks(); // Ruční aktualizace UI pro jistotu
         })
-        .catch(err => console.error("Chyba při přidávání podúkolu:", err));
+        .catch(err => {
+            console.error("Chyba při přidávání podúkolu:", err);
+            alert("Chyba při přidávání podúkolu: " + err.message);
+        });
 };
 
 window.deleteTask = function(taskId) {
@@ -281,10 +299,14 @@ window.deleteSubtask = function(taskId, subtaskId) {
     remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
 };
 
-window.toggleSubtaskMenu = function(taskId) {
+window.toggleSubtaskMenu = function(taskId, forceOpen = false) {
     const subtaskMenu = document.getElementById(`subtask-menu-${taskId}`);
-    const isHidden = subtaskMenu.style.display === 'none';
-    subtaskMenu.style.display = isHidden ? 'block' : 'none';
+    if (forceOpen) {
+        subtaskMenu.style.display = 'block';
+    } else {
+        const isHidden = subtaskMenu.style.display === 'none';
+        subtaskMenu.style.display = isHidden ? 'block' : 'none';
+    }
 };
 
 function setupCheckbox(taskId) {
@@ -320,6 +342,7 @@ function loadTasks() {
     const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
     console.log("Načítám úkoly pro checklist:", currentChecklistId);
     onValue(tasksRef, snapshot => {
+        console.log("Snapshot úkolů:", snapshot.val());
         checklistItems.innerHTML = '';
         if (snapshot.exists()) {
             const tasks = [];
@@ -419,7 +442,7 @@ async function updateSubtaskOrder(taskId) {
     const subtaskList = document.getElementById(`subtask-list-${taskId}`);
     const items = Array.from(subtaskList.children);
     const updates = {};
-    items.forEach((item, index) => {
+    items.forEach((item, index) => { 
         const id = item.dataset.id;
         updates[`checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${id}/order`] = index;
     });
