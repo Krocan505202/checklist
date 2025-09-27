@@ -31,6 +31,36 @@ header {
     margin-bottom: 1em;
 }
 
+.checklist-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1em 0;
+}
+
+.checklist-list-item {
+    padding: 0.5em;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    margin-bottom: 0.5em;
+    cursor: move;
+    transition: background-color 0.2s;
+}
+
+.checklist-list-item:hover {
+    background-color: #e0e0e0;
+}
+
+.checklist-list-item.dragging {
+    opacity: 0.5;
+    background-color: #d0d0d0;
+}
+
+.checklist-list-item.active {
+    background-color: #2c3e50;
+    color: white;
+}
+
 .checklist-item {
     margin-bottom: 1.5em;
     padding: 1em;
@@ -197,22 +227,10 @@ header {
 
 #checklist-controls {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
     margin-bottom: 20px;
-    flex-wrap: wrap;
-}
-
-#checklist-select {
-    padding: 0.5em;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    background-color: white;
-    cursor: move;
-}
-
-#checklist-select option:hover {
-    background-color: #e0e0e0;
 }
 
 @media (max-width: 600px) {
@@ -238,12 +256,6 @@ header {
         margin-top: 0.5em;
     }
 
-    #checklist-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    #checklist-controls select,
     #checklist-controls button {
         width: 100%;
         margin-bottom: 0.5em;
