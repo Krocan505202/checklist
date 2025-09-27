@@ -35,11 +35,6 @@ header {
     margin-bottom: 1.5em;
     padding: 1em;
     border-bottom: 1px solid #eee;
-    cursor: move;
-}
-
-.checklist-item.dragging {
-    opacity: 0.5;
 }
 
 .task-header {
@@ -65,11 +60,6 @@ header {
     align-items: center;
     margin-bottom: 0.5em;
     gap: 10px;
-    cursor: move;
-}
-
-.subtask-item.dragging {
-    opacity: 0.5;
 }
 
 .checklist-item input[type="checkbox"],
