@@ -38,6 +38,10 @@ header {
     cursor: move; /* Pro drag-and-drop */
 }
 
+.checklist-item.dragging {
+    opacity: 0.5;
+}
+
 .task-header {
     display: flex;
     align-items: center;
@@ -61,7 +65,11 @@ header {
     align-items: center;
     margin-bottom: 0.5em;
     gap: 10px;
-    cursor: move; /* Pro drag-and-drop subtasks */
+    cursor: move; /* Pro drag-and-drop podúkolů */
+}
+
+.subtask-item.dragging {
+    opacity: 0.5;
 }
 
 .checklist-item input[type="checkbox"],
@@ -183,31 +191,11 @@ header {
     flex-wrap: wrap;
 }
 
-#checklist-list {
-    list-style: none;
-    padding: 0;
-    margin: 20px 0;
-    width: 100%;
-}
-
-#checklist-list li {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    background-color: #f9f9f9;
+#checklist-select {
+    padding: 0.5em;
     border: 1px solid #ddd;
-    margin-bottom: 10px;
-    cursor: move;
-    gap: 10px;
-}
-
-#checklist-list li.current {
-    background-color: #e0f7fa;
-    border-color: #00acc1;
-}
-
-#checklist-list li span {
-    flex-grow: 1;
+    border-radius: 3px;
+    background-color: white;
 }
 
 @media (max-width: 600px) {
@@ -238,13 +226,9 @@ header {
         align-items: stretch;
     }
 
+    #checklist-controls select,
     #checklist-controls button {
         width: 100%;
         margin-bottom: 0.5em;
-    }
-
-    #checklist-list li {
-        flex-direction: column;
-        align-items: stretch;
     }
 }
