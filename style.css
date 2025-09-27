@@ -35,6 +35,17 @@ header {
     margin-bottom: 1.5em;
     padding: 1em;
     border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.checklist-item:hover {
+    background-color: #f0f0f0;
+    cursor: move;
+}
+
+.checklist-item.dragging {
+    opacity: 0.5;
+    background-color: #e0e0e0;
 }
 
 .task-header {
@@ -60,6 +71,17 @@ header {
     align-items: center;
     margin-bottom: 0.5em;
     gap: 10px;
+    transition: background-color 0.2s;
+}
+
+.subtask-item:hover {
+    background-color: #f0f0f0;
+    cursor: move;
+}
+
+.subtask-item.dragging {
+    opacity: 0.5;
+    background-color: #e0e0e0;
 }
 
 .checklist-item input[type="checkbox"],
@@ -186,6 +208,11 @@ header {
     border: 1px solid #ddd;
     border-radius: 3px;
     background-color: white;
+    cursor: move;
+}
+
+#checklist-select option:hover {
+    background-color: #e0e0e0;
 }
 
 @media (max-width: 600px) {
