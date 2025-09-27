@@ -16,9 +16,7 @@
             <p id="user-info"></p>
             <p id="contact-info" style="text-align: center; color: #2c3e50;">Pro více informací o tomto projektu mě kontaktujte na: <a href="mailto:vojtech.krocanek@gmail.com">vojtech.krocanek@gmail.com</a></p>
             <div id="checklist-controls" style="display:none; margin-bottom: 20px;">
-                <select id="checklist-select" onchange="switchChecklist(this.value)" draggable="true">
-                    <option value="">Vyberte checklist</option>
-                </select>
+                <ul id="checklist-list"></ul>
                 <button class="checklist-control-btn" onclick="createNewChecklist()">Nový checklist</button>
                 <button class="checklist-control-btn" id="rename-checklist-btn" onclick="renameChecklist()">Přejmenovat checklist</button>
                 <button class="checklist-control-btn" onclick="deleteChecklist()" id="delete-checklist-btn" style="display:none;">Smazat checklist</button>
