@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-import { getDatabase, ref, onValue, set, remove, push, get } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -66,23 +66,20 @@ onAuthStateChanged(auth, user => {
     }
 });
 
-window.createNewChecklist = async function() {
+window.createNewChecklist = function() {
     const checklistName = prompt("Zadejte název nového checklistu:");
     if (!checklistName || checklistName.trim() === "") {
         alert("Název checklistu nemůže být prázdný!");
         return;
     }
     const checklistId = `checklist-${Date.now()}`;
-    const checklistsRef = ref(database, `checklist/metadata`);
-    const snapshot = await get(checklistsRef);
-    const order = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
     const checklistRef = ref(database, `checklist/metadata/${checklistId}`);
     console.log("Vytvářím nový checklist:", checklistId, checklistName);
-    set(checklistRef, { name: checklistName.trim(), order })
+    set(checklistRef, { name: checklistName.trim() })
         .then(() => {
             console.log("Checklist úspěšně vytvořen:", checklistId);
-            switchChecklist(checklistId);
-            loadChecklists();
+            switchChecklist(checklistId); // Přepneme na nový checklist
+            loadChecklists(); // Aktualizujeme dropdown
         })
         .catch(err => {
             console.error("Chyba při vytváření checklistu:", err);
@@ -103,10 +100,10 @@ window.renameChecklist = function() {
     }
     const checklistRef = ref(database, `checklist/metadata/${currentChecklistId}`);
     console.log("Přejmenovávám checklist:", currentChecklistId, "na:", newName);
-    set(checklistRef, { name: newName.trim(), order: checklistSelect.selectedOptions[0].dataset.order })
+    set(checklistRef, { name: newName.trim() })
         .then(() => {
             console.log("Checklist úspěšně přejmenován:", currentChecklistId);
-            loadChecklists();
+            loadChecklists(); // Znovu načteme checklisty pro aktualizaci dropdownu
         })
         .catch(err => {
             console.error("Chyba při přejmenování checklistu:", err);
@@ -134,7 +131,7 @@ window.deleteChecklist = function() {
             currentChecklistId = null;
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
-            loadChecklists();
+            loadChecklists(); // Znovu načteme checklisty
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -161,31 +158,26 @@ function loadChecklists() {
     const checklistsRef = ref(database, `checklist/metadata`);
     console.log("Načítám checklisty");
     onValue(checklistsRef, snapshot => {
-        checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
+        checklistSelect.innerHTML = ''; // Vymažeme obsah dropdownu
         let firstChecklistId = null;
         if (snapshot.exists()) {
-            const checklists = [];
             snapshot.forEach(childSnapshot => {
-                checklists.push({ id: childSnapshot.key, ...childSnapshot.val() });
-            });
-            checklists.sort((a, b) => a.order - b.order); // Seřadíme podle order
-            checklists.forEach(checklist => {
+                const checklistId = childSnapshot.key;
+                const checklistData = childSnapshot.val();
                 const option = document.createElement('option');
-                option.value = checklist.id;
-                option.textContent = checklist.name;
-                option.dataset.order = checklist.order;
-                if (!firstChecklistId) firstChecklistId = checklist.id;
-                if (checklist.id === currentChecklistId) option.selected = true;
+                option.value = checklistId;
+                option.textContent = checklistData.name;
+                if (!firstChecklistId) firstChecklistId = checklistId; // Uložíme ID prvního checklistu
+                if (checklistId === currentChecklistId) option.selected = true;
                 checklistSelect.appendChild(option);
             });
-            checklistSelect.setAttribute('draggable', 'true');
-            checklistSelect.addEventListener('dragstart', handleChecklistDragStart);
-            checklistSelect.addEventListener('dragover', handleChecklistDragOver);
-            checklistSelect.addEventListener('drop', handleChecklistDrop);
+            // Pokud není žádný checklist vybrán a existuje alespoň jeden, automaticky vybereme první
             if (!currentChecklistId && firstChecklistId) {
                 switchChecklist(firstChecklistId);
             }
         } else {
+            // Pokud neexistují žádné checklisty, zobrazíme "Vyberte checklist"
+            checklistSelect.innerHTML = '<option value="">Vyberte checklist</option>';
             currentChecklistId = null;
             checklistItems.innerHTML = "";
             deleteChecklistBtn.style.display = "none";
@@ -201,40 +193,7 @@ function updateChecklistSelect() {
     });
 }
 
-function handleChecklistDragStart(e) {
-    e.dataTransfer.setData('text/plain', e.target.value);
-}
-
-function handleChecklistDragOver(e) {
-    e.preventDefault();
-}
-
-async function handleChecklistDrop(e) {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain');
-    const targetId = e.target.value;
-    if (draggedId === targetId || !draggedId || !targetId) return;
-
-    const checklistsRef = ref(database, `checklist/metadata`);
-    const snapshot = await get(checklistsRef);
-    const checklists = [];
-    snapshot.forEach(childSnapshot => {
-        checklists.push({ id: childSnapshot.key, ...childSnapshot.val() });
-    });
-    checklists.sort((a, b) => a.order - b.order);
-
-    const draggedIndex = checklists.findIndex(c => c.id === draggedId);
-    const targetIndex = checklists.findIndex(c => c.id === targetId);
-    const [draggedChecklist] = checklists.splice(draggedIndex, 1);
-    checklists.splice(targetIndex, 0, draggedChecklist);
-
-    checklists.forEach((checklist, index) => {
-        const checklistRef = ref(database, `checklist/metadata/${checklist.id}`);
-        set(checklistRef, { ...checklist, order: index });
-    });
-}
-
-window.addTask = async function() {
+window.addTask = function() {
     const newTaskInput = document.getElementById('new-task');
     const taskText = newTaskInput.value.trim();
     if (taskText === '' || !currentChecklistId) {
@@ -242,12 +201,10 @@ window.addTask = async function() {
         return;
     }
     const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
-    const snapshot = await get(tasksRef);
-    const order = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
     const newTaskRef = push(tasksRef);
     const newTaskId = newTaskRef.key;
     console.log("Přidávám úkol:", taskText, "do checklistu:", currentChecklistId);
-    set(newTaskRef, { text: taskText, checked: false, subtasks: {}, order })
+    set(newTaskRef, { text: taskText, checked: false, subtasks: {} })
         .then(() => {
             newTaskInput.value = '';
         })
@@ -266,7 +223,7 @@ window.editTask = function(taskId, currentText) {
     }
 };
 
-window.addSubtask = async function(taskId) {
+window.addSubtask = function(taskId) {
     const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
     const subtaskText = subtaskInput.value.trim();
     if (subtaskText === '' || !currentChecklistId) {
@@ -274,10 +231,8 @@ window.addSubtask = async function(taskId) {
         return;
     }
     const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
-    const snapshot = await get(subtaskRef);
-    const order = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
     const newSubtaskRef = push(subtaskRef);
-    set(newSubtaskRef, { text: subtaskText, checked: false, order })
+    set(newSubtaskRef, { text: subtaskText, checked: false })
         .then(() => {
             subtaskInput.value = '';
             toggleSubtaskMenu(taskId, true);
@@ -288,13 +243,13 @@ window.addSubtask = async function(taskId) {
 window.deleteTask = function(taskId) {
     const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
     console.log("Mažu úkol:", taskId, "z checklistu:", currentChecklistId);
-    remove(taskRef).then(() => updateTaskOrder()).catch(err => console.error("Chyba při mazání úkolu:", err));
+    remove(taskRef).catch(err => console.error("Chyba při mazání úkolu:", err));
 };
 
 window.deleteSubtask = function(taskId, subtaskId) {
     const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
     console.log("Mažu podúkol:", subtaskId, "z úkolu:", taskId);
-    remove(subtaskRef).then(() => updateSubtaskOrder(taskId)).catch(err => console.error("Chyba při mazání podúkolu:", err));
+    remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
 };
 
 window.toggleSubtaskMenu = function(taskId) {
@@ -327,106 +282,6 @@ function setupSubtaskCheckbox(taskId, subtaskId) {
     });
 }
 
-async function updateTaskOrder() {
-    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
-    const snapshot = await get(tasksRef);
-    if (snapshot.exists()) {
-        const tasks = [];
-        snapshot.forEach(childSnapshot => {
-            tasks.push({ id: childSnapshot.key, ...childSnapshot.val() });
-        });
-        tasks.sort((a, b) => a.order - b.order);
-        tasks.forEach((task, index) => {
-            const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${task.id}`);
-            set(taskRef, { ...task, order: index });
-        });
-    }
-}
-
-async function updateSubtaskOrder(taskId) {
-    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
-    const snapshot = await get(subtaskRef);
-    if (snapshot.exists()) {
-        const subtasks = [];
-        snapshot.forEach(childSnapshot => {
-            subtasks.push({ id: childSnapshot.key, ...childSnapshot.val() });
-        });
-        subtasks.sort((a, b) => a.order - b.order);
-        subtasks.forEach((subtask, index) => {
-            const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtask.id}`);
-            set(subtaskRef, { ...subtask, order: index });
-        });
-    }
-}
-
-function handleTaskDragStart(e) {
-    e.dataTransfer.setData('text/plain', e.currentTarget.id);
-}
-
-function handleTaskDragOver(e) {
-    e.preventDefault();
-}
-
-async function handleTaskDrop(e) {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain');
-    const targetId = e.currentTarget.id;
-    if (draggedId === targetId || !draggedId || !targetId) return;
-
-    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
-    const snapshot = await get(tasksRef);
-    const tasks = [];
-    snapshot.forEach(childSnapshot => {
-        tasks.push({ id: childSnapshot.key, ...childSnapshot.val() });
-    });
-    tasks.sort((a, b) => a.order - b.order);
-
-    const draggedIndex = tasks.findIndex(t => t.id === draggedId);
-    const targetIndex = tasks.findIndex(t => t.id === targetId);
-    const [draggedTask] = tasks.splice(draggedIndex, 1);
-    tasks.splice(targetIndex, 0, draggedTask);
-
-    tasks.forEach((task, index) => {
-        const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${task.id}`);
-        set(taskRef, { ...task, order: index });
-    });
-}
-
-function handleSubtaskDragStart(e) {
-    e.dataTransfer.setData('text/plain', e.currentTarget.id);
-    e.dataTransfer.setData('task-id', e.currentTarget.dataset.taskId);
-}
-
-function handleSubtaskDragOver(e) {
-    e.preventDefault();
-}
-
-async function handleSubtaskDrop(e) {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData('text/plain');
-    const taskId = e.dataTransfer.getData('task-id');
-    const targetId = e.currentTarget.id;
-    if (draggedId === targetId || !draggedId || !targetId) return;
-
-    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
-    const snapshot = await get(subtaskRef);
-    const subtasks = [];
-    snapshot.forEach(childSnapshot => {
-        subtasks.push({ id: childSnapshot.key, ...childSnapshot.val() });
-    });
-    subtasks.sort((a, b) => a.order - b.order);
-
-    const draggedIndex = subtasks.findIndex(s => s.id === draggedId);
-    const targetIndex = subtasks.findIndex(s => s.id === targetId);
-    const [draggedSubtask] = subtasks.splice(draggedIndex, 1);
-    subtasks.splice(targetIndex, 0, draggedSubtask);
-
-    subtasks.forEach((subtask, index) => {
-        const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtask.id}`);
-        set(subtaskRef, { ...subtask, order: index });
-    });
-}
-
 function loadTasks() {
     if (!currentChecklistId) {
         console.log("Žádný checklist nevybrán, čistím seznam úkolů");
@@ -438,21 +293,12 @@ function loadTasks() {
     onValue(tasksRef, snapshot => {
         checklistItems.innerHTML = '';
         if (snapshot.exists()) {
-            const tasks = [];
             snapshot.forEach(childSnapshot => {
-                tasks.push({ id: childSnapshot.key, ...childSnapshot.val() });
-            });
-            tasks.sort((a, b) => a.order - b.order); // Seřadíme podle order
-            tasks.forEach(taskData => {
-                const taskId = taskData.id;
+                const taskId = childSnapshot.key;
+                const taskData = childSnapshot.val();
                 const hasSubtasks = taskData.subtasks && Object.keys(taskData.subtasks).length > 0;
                 const newItem = document.createElement('div');
                 newItem.className = 'checklist-item';
-                newItem.id = taskId;
-                newItem.setAttribute('draggable', 'true');
-                newItem.addEventListener('dragstart', handleTaskDragStart);
-                newItem.addEventListener('dragover', handleTaskDragOver);
-                newItem.addEventListener('drop', handleTaskDrop);
                 newItem.innerHTML = `
                     <div class="task-header">
                         <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
@@ -474,18 +320,9 @@ function loadTasks() {
 
                 if (taskData.subtasks) {
                     const subtaskList = document.getElementById(`subtask-list-${taskId}`);
-                    const subtasks = Object.entries(taskData.subtasks).map(([id, data]) => ({ id, ...data }));
-                    subtasks.sort((a, b) => a.order - b.order); // Seřadíme podle order
-                    subtasks.forEach(subtaskData => {
-                        const subtaskId = subtaskData.id;
+                    Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
                         const subtaskItem = document.createElement('div');
                         subtaskItem.className = 'subtask-item';
-                        subtaskItem.id = subtaskId;
-                        subtaskItem.setAttribute('draggable', 'true');
-                        subtaskItem.dataset.taskId = taskId;
-                        subtaskItem.addEventListener('dragstart', handleSubtaskDragStart);
-                        subtaskItem.addEventListener('dragover', handleSubtaskDragOver);
-                        subtaskItem.addEventListener('drop', handleSubtaskDrop);
                         subtaskItem.innerHTML = `
                             <input type="checkbox" id="${subtaskId}" ${subtaskData.checked ? "checked" : ""}>
                             <label for="${subtaskId}" class="${subtaskData.checked ? "completed" : ""}">${subtaskData.text}</label>
