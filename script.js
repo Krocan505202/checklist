@@ -53,7 +53,7 @@ onAuthStateChanged(auth, user => {
         contactInfo.style.display = "none";
         taskControls.style.display = "block";
         checklistControls.style.display = "block";
-        loadChecklists();
+        loadChecklists(true); // Otevřít seznam checklistů po přihlášení
     } else {
         console.log("Uživatel odhlášen");
         loginBtn.style.display = "inline-block";
@@ -66,6 +66,9 @@ onAuthStateChanged(auth, user => {
         checklistItems.innerHTML = "";
         currentChecklistId = null;
         currentChecklistDisplay.style.display = "none";
+        isChecklistListOpen = false;
+        checklistList.classList.remove('show');
+        toggleChecklistBtn.textContent = '▶';
     }
 });
 
@@ -140,7 +143,7 @@ function deleteChecklist() {
             console.log("Checklist úspěšně smazán:", currentChecklistId);
             currentChecklistId = null;
             checklistItems.innerHTML = "";
-            loadChecklists();
+            loadChecklists(true); // Otevřít seznam po smazání, aby uživatel mohl vybrat jiný
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -165,7 +168,7 @@ function switchChecklist(checklistId) {
     updateCurrentDisplay();
 }
 
-function loadChecklists() {
+function loadChecklists(openList = false) {
     const checklistsRef = ref(database, `checklist/metadata`);
     console.log("Načítám checklisty");
     onValue(checklistsRef, snapshot => {
@@ -195,11 +198,23 @@ function loadChecklists() {
                     onEnd: updateChecklistOrder
                 });
             }
+            // Automaticky vybrat první checklist, pokud není žádný vybrán
+            if (!currentChecklistId && checklists.length > 0) {
+                currentChecklistId = checklists[0].id;
+                loadTasks();
+            }
             updateCurrentDisplay();
+            // Otevřít seznam checklistů, pokud je openList true nebo není vybrán žádný checklist
+            if (openList || !currentChecklistId) {
+                toggleChecklistList(true);
+            } else {
+                toggleChecklistList(false);
+            }
         } else {
             currentChecklistId = null;
             checklistItems.innerHTML = "";
             currentChecklistDisplay.style.display = "none";
+            toggleChecklistList(true); // Otevřít seznam, pokud neexistují checklisty
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
@@ -212,6 +227,8 @@ function updateCurrentDisplay() {
         if (currentLi) {
             currentChecklistName.textContent = currentLi.querySelector('span').textContent;
             currentChecklistDisplay.style.display = "flex";
+        } else {
+            currentChecklistDisplay.style.display = "none";
         }
     } else {
         currentChecklistDisplay.style.display = "none";
