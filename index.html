@@ -18,8 +18,12 @@
             <p id="contact-info" style="text-align: center; color: #2c3e50;">Pro více informací o tomto projektu mě kontaktujte na: <a href="mailto:vojtech.krocanek@gmail.com">vojtech.krocanek@gmail.com</a></p>
             <div id="checklist-controls" style="display:none; margin-bottom: 20px;">
                 <button id="new-checklist-btn" class="checklist-control-btn">Nový checklist</button>
-                <h3>Seznam checklistů (přetáhněte pro změnu pořadí)</h3>
-                <ul id="checklist-list"></ul>
+                <h3>Vyberte checklist</h3>
+                <select id="checklist-select">
+                    <option value="">Vyberte checklist</option>
+                </select>
+                <button id="rename-checklist-btn" class="edit-btn">Přejmenovat</button>
+                <button id="delete-checklist-btn" class="delete-btn">Smazat</button>
             </div>
             <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
