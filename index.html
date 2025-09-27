@@ -17,13 +17,13 @@
             <p id="user-info"></p>
             <p id="contact-info" style="text-align: center; color: #2c3e50;">Pro více informací o tomto projektu mě kontaktujte na: <a href="mailto:vojtech.krocanek@gmail.com">vojtech.krocanek@gmail.com</a></p>
             <div id="checklist-controls" style="display:none; margin-bottom: 20px;">
-                <button class="checklist-control-btn" onclick="createNewChecklist()">Nový checklist</button>
+                <button id="new-checklist-btn" class="checklist-control-btn">Nový checklist</button>
                 <h3>Seznam checklistů (přetáhněte pro změnu pořadí)</h3>
                 <ul id="checklist-list"></ul>
             </div>
             <div class="add-task" style="display:none;" id="task-controls">
                 <input type="text" id="new-task" placeholder="Zadejte nový úkol">
-                <button onclick="addTask()">Přidat úkol</button>
+                <button id="add-task-btn">Přidat úkol</button>
             </div>
             <div id="checklist-items"></div>
         </section>
