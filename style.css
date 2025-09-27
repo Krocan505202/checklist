@@ -183,31 +183,15 @@ header {
     flex-wrap: wrap;
 }
 
-#checklist-list {
-    list-style: none;
-    padding: 0;
-    margin: 20px 0;
-    width: 100%;
-}
-
-#checklist-list li {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    cursor: move;
-    gap: 10px;
-}
-
-#checklist-list li.current {
-    background-color: #e0f7fa;
-    border-color: #00acc1;
-}
-
-#checklist-list li span {
+#checklist-controls select {
+    padding: 0.5em;
     flex-grow: 1;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+#checklist-controls button {
+    margin-bottom: 0;
 }
 
 @media (max-width: 600px) {
@@ -241,10 +225,5 @@ header {
     #checklist-controls button {
         width: 100%;
         margin-bottom: 0.5em;
-    }
-
-    #checklist-list li {
-        flex-direction: column;
-        align-items: stretch;
     }
 }
