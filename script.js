@@ -26,8 +26,12 @@ const taskControls = document.getElementById("task-controls");
 const checklistControls = document.getElementById("checklist-controls");
 const checklistList = document.getElementById("checklist-list");
 const checklistItems = document.getElementById("checklist-items");
+const currentChecklistDisplay = document.getElementById("current-checklist-display");
+const currentChecklistName = document.getElementById("current-checklist-name");
+const toggleChecklistBtn = document.getElementById("toggle-checklist-btn");
 
 let currentChecklistId = null;
+let isChecklistListOpen = false;
 
 loginBtn.onclick = () => {
     signInWithPopup(auth, provider).catch(err => {
@@ -61,6 +65,7 @@ onAuthStateChanged(auth, user => {
         checklistList.innerHTML = "";
         checklistItems.innerHTML = "";
         currentChecklistId = null;
+        currentChecklistDisplay.style.display = "none";
     }
 });
 
@@ -148,12 +153,16 @@ function switchChecklist(checklistId) {
         console.log("Žádný checklist nevybrán");
         currentChecklistId = null;
         checklistItems.innerHTML = "";
+        toggleChecklistList(false); // Sbalit seznam po výběru
+        updateCurrentDisplay();
         return;
     }
     console.log("Přepínám na checklist:", checklistId);
     currentChecklistId = checklistId;
     loadTasks();
     loadChecklists();
+    toggleChecklistList(false); // Sbalit seznam po výběru
+    updateCurrentDisplay();
 }
 
 function loadChecklists() {
@@ -186,13 +195,38 @@ function loadChecklists() {
                     onEnd: updateChecklistOrder
                 });
             }
+            updateCurrentDisplay();
         } else {
             currentChecklistId = null;
             checklistItems.innerHTML = "";
+            currentChecklistDisplay.style.display = "none";
         }
     }, err => {
         console.error("Chyba při načítání checklistů:", err);
     });
+}
+
+function updateCurrentDisplay() {
+    if (currentChecklistId) {
+        const currentLi = document.querySelector(`#checklist-list li[data-id="${currentChecklistId}"]`);
+        if (currentLi) {
+            currentChecklistName.textContent = currentLi.querySelector('span').textContent;
+            currentChecklistDisplay.style.display = "flex";
+        }
+    } else {
+        currentChecklistDisplay.style.display = "none";
+    }
+}
+
+function toggleChecklistList(force = null) {
+    isChecklistListOpen = force !== null ? force : !isChecklistListOpen;
+    if (isChecklistListOpen) {
+        checklistList.classList.add('show');
+        toggleChecklistBtn.textContent = '▼';
+    } else {
+        checklistList.classList.remove('show');
+        toggleChecklistBtn.textContent = '▶';
+    }
 }
 
 async function updateChecklistOrder() {
@@ -473,6 +507,7 @@ async function updateSubtaskOrder(taskId) {
 document.addEventListener('DOMContentLoaded', () => {
     const newChecklistBtn = document.getElementById('new-checklist-btn');
     const addTaskBtn = document.getElementById('add-task-btn');
+    const toggleChecklistBtn = document.getElementById('toggle-checklist-btn');
 
     if (newChecklistBtn) {
         newChecklistBtn.addEventListener('click', createNewChecklist);
@@ -484,6 +519,12 @@ document.addEventListener('DOMContentLoaded', () => {
         addTaskBtn.addEventListener('click', addTask);
     } else {
         console.error("Tlačítko s id='add-task-btn' nenalezeno!");
+    }
+
+    if (toggleChecklistBtn) {
+        toggleChecklistBtn.addEventListener('click', () => toggleChecklistList());
+    } else {
+        console.error("Tlačítko s id='toggle-checklist-btn' nenalezeno!");
     }
 });
 
