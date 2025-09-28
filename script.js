@@ -100,22 +100,22 @@ async function createNewChecklist() {
         });
 }
 
-function renameChecklist() {
-    if (!currentChecklistId) {
+function renameChecklist(checklistId) {
+    if (!checklistId) {
         alert("Není vybrán žádný checklist k přejmenování!");
         return;
     }
-    const currentName = document.querySelector(`#checklist-list li[data-id="${currentChecklistId}"] span`).textContent;
+    const currentName = document.querySelector(`#checklist-list li[data-id="${checklistId}"] span`).textContent;
     const newName = prompt("Zadejte nový název checklistu:", currentName);
     if (!newName || newName.trim() === "") {
         alert("Název checklistu nemůže být prázdný!");
         return;
     }
-    const checklistRef = ref(database, `checklist/metadata/${currentChecklistId}`);
-    console.log("Přejmenovávám checklist:", currentChecklistId, "na:", newName);
+    const checklistRef = ref(database, `checklist/metadata/${checklistId}`);
+    console.log("Přejmenovávám checklist:", checklistId, "na:", newName);
     update(checklistRef, { name: newName.trim() })
         .then(() => {
-            console.log("Checklist úspěšně přejmenován:", currentChecklistId);
+            console.log("Checklist úspěšně přejmenován:", checklistId);
             loadChecklists();
         })
         .catch(err => {
@@ -124,26 +124,28 @@ function renameChecklist() {
         });
 }
 
-function deleteChecklist() {
-    if (!currentChecklistId) {
+function deleteChecklist(checklistId) {
+    if (!checklistId) {
         alert("Není vybrán žádný checklist k smazání!");
         return;
     }
-    const currentName = document.querySelector(`#checklist-list li[data-id="${currentChecklistId}"] span`).textContent;
+    const currentName = document.querySelector(`#checklist-list li[data-id="${checklistId}"] span`).textContent;
     if (!confirm(`Opravdu chcete smazat checklist '${currentName}'?`)) {
         return;
     }
-    const checklistRef = ref(database, `checklist/${currentChecklistId}`);
-    const metadataRef = ref(database, `checklist/metadata/${currentChecklistId}`);
-    console.log("Mažu checklist:", currentChecklistId);
+    const checklistRef = ref(database, `checklist/${checklistId}`);
+    const metadataRef = ref(database, `checklist/metadata/${checklistId}`);
+    console.log("Mažu checklist:", checklistId);
     Promise.all([
         remove(checklistRef),
         remove(metadataRef)
     ])
         .then(() => {
-            console.log("Checklist úspěšně smazán:", currentChecklistId);
-            currentChecklistId = null;
-            checklistItems.innerHTML = "";
+            console.log("Checklist úspěšně smazán:", checklistId);
+            if (currentChecklistId === checklistId) {
+                currentChecklistId = null;
+                checklistItems.innerHTML = "";
+            }
             loadChecklists(true); // Otevřít seznam po smazání, aby uživatel mohl vybrat jiný
         })
         .catch(err => {
@@ -188,8 +190,8 @@ function loadChecklists(openList = false) {
                 li.className = checklist.id === currentChecklistId ? 'current' : '';
                 li.innerHTML = `
                     <span onclick="switchChecklist('${checklist.id}')">${checklist.name}</span>
-                    <button class="edit-btn" onclick="renameChecklist()">Přejmenovat</button>
-                    <button class="delete-btn" onclick="deleteChecklist()">Smazat</button>
+                    <button class="edit-btn" onclick="renameChecklist('${checklist.id}')">Přejmenovat</button>
+                    <button class="delete-btn" onclick="deleteChecklist('${checklist.id}')">Smazat</button>
                 `;
                 checklistList.appendChild(li);
             });
