@@ -244,7 +244,6 @@ function switchChecklist(checklistId, subchecklistId = null) {
         currentChecklistId = null;
         currentSubchecklistId = null;
         checklistItems.innerHTML = "";
-        toggleChecklistList(false);
         updateCurrentDisplay();
         return;
     }
@@ -253,7 +252,6 @@ function switchChecklist(checklistId, subchecklistId = null) {
     currentSubchecklistId = subchecklistId;
     loadTasks();
     loadChecklists();
-    toggleChecklistList(false);
     updateCurrentDisplay();
 }
 
@@ -350,7 +348,7 @@ function loadChecklists(openList = false) {
                 loadTasks();
             }
             updateCurrentDisplay();
-            toggleChecklistList(openList);
+            toggleChecklistList(openList || isChecklistListOpen); // Zachovat stav otevřenosti
         } else {
             currentChecklistId = null;
             currentSubchecklistId = null;
