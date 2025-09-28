@@ -307,6 +307,18 @@ function editTask(taskId, currentText) {
     }
 }
 
+function editSubtask(taskId, subtaskId, currentText) {
+    const newText = prompt("Upravit podúkol:", currentText);
+    if (newText && newText.trim() !== '') {
+        const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
+        onValue(subtaskRef, snapshot => {
+            const subtaskData = snapshot.val();
+            set(subtaskRef, { ...subtaskData, text: newText.trim() })
+                .catch(err => console.error("Chyba při úpravě podúkolu:", err));
+        }, { onlyOnce: true });
+    }
+}
+
 async function addSubtask(taskId) {
     console.log("Spouštím addSubtask pro taskId:", taskId);
     const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
@@ -457,13 +469,16 @@ function loadTasks() {
                         subtaskItem.innerHTML = `
                             <input type="checkbox" id="${subtaskId}" ${subtaskData.checked ? "checked" : ""}>
                             <label for="${subtaskId}" class="${subtaskData.checked ? "completed" : ""}">${subtaskData.text}</label>
+                            <button class="edit-subtask-btn" data-task-id="${taskId}" data-subtask-id="${subtaskId}">Upravit</button>
                             <button class="delete-subtask-btn" data-task-id="${taskId}" data-subtask-id="${subtaskId}">Smazat</button>
                         `;
                         subtaskList.appendChild(subtaskItem);
                         setupSubtaskCheckbox(taskId, subtaskId);
 
-                        // Attach event listener for subtask delete button
+                        // Attach event listeners for subtask buttons
+                        const editSubtaskBtn = subtaskItem.querySelector(`.edit-subtask-btn[data-subtask-id="${subtaskId}"]`);
                         const deleteSubtaskBtn = subtaskItem.querySelector(`.delete-subtask-btn[data-subtask-id="${subtaskId}"]`);
+                        editSubtaskBtn.addEventListener('click', () => editSubtask(taskId, subtaskId, subtaskData.text));
                         deleteSubtaskBtn.addEventListener('click', () => deleteSubtask(taskId, subtaskId));
                     });
                     if (!subtaskList.sortable) {
@@ -547,4 +562,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // Expose functions globally for inline onclick handlers in checklist-list
 window.switchChecklist = switchChecklist;
 window.renameChecklist = renameChecklist;
-window.deleteChecklist = deleteChecklist;
+window.deleteChecklist = deleteChecklist;    
