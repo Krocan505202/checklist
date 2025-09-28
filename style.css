@@ -80,7 +80,7 @@ header {
     color: #888;
 }
 
-.delete-btn, .edit-btn, .toggle-subtask-btn, .checklist-control-btn {
+.delete-btn, .edit-btn, .toggle-subtask-btn, .checklist-control-btn, .delete-subtask-btn, .edit-subtask-btn {
     margin-left: 0.5em;
     padding: 0.3em 0.6em;
     border: none;
@@ -89,21 +89,21 @@ header {
     font-size: 0.9em;
 }
 
-.delete-btn {
+.delete-btn, .delete-subtask-btn {
     background-color: #e74c3c;
     color: white;
 }
 
-.delete-btn:hover {
+.delete-btn:hover, .delete-subtask-btn:hover {
     background-color: #c0392b;
 }
 
-.edit-btn {
+.edit-btn, .edit-subtask-btn {
     background-color: #3498db;
     color: white;
 }
 
-.edit-btn:hover {
+.edit-btn:hover, .edit-subtask-btn:hover {
     background-color: #2980b9;
 }
 
@@ -267,7 +267,7 @@ header {
         flex-wrap: wrap;
     }
 
-    .delete-btn, .edit-btn, .toggle-subtask-btn, .checklist-control-btn {
+    .delete-btn, .edit-btn, .toggle-subtask-btn, .checklist-control-btn, .delete-subtask-btn, .edit-subtask-btn {
         margin-top: 0.5em;
     }
 
