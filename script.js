@@ -563,3 +563,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.switchChecklist = switchChecklist;
 window.renameChecklist = renameChecklist;
 window.deleteChecklist = deleteChecklist;    
+
