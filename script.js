@@ -32,6 +32,7 @@ const currentChecklistDisplay = document.getElementById("current-checklist-displ
 const currentChecklistName = document.getElementById("current-checklist-name");
 const toggleChecklistBtn = document.getElementById("toggle-checklist-btn");
 const newSubchecklistBtn = document.getElementById("new-subchecklist-btn");
+const subchecklistSelector = document.getElementById("subchecklist-selector");
 
 let currentChecklistId = null;
 let isChecklistListOpen = false;
@@ -56,8 +57,8 @@ onAuthStateChanged(auth, user => {
         contactInfo.style.display = "none";
         taskControls.style.display = "block";
         checklistControls.style.display = "block";
-        loadChecklists(true); // Vždy otevřít seznam checklistů po přihlášení
-        toggleChecklistList(true); // Explicitně otevřít seznam checklistů
+        loadChecklists(true);
+        toggleChecklistList(true);
     } else {
         console.log("Uživatel odhlášen");
         loginBtn.style.display = "inline-block";
@@ -69,6 +70,7 @@ onAuthStateChanged(auth, user => {
         checklistList.innerHTML = "";
         subchecklistList.innerHTML = "";
         checklistItems.innerHTML = "";
+        subchecklistSelector.style.display = "none";
         currentChecklistId = null;
         currentChecklistDisplay.style.display = "none";
         subchecklistMenu.style.display = "none";
@@ -205,8 +207,9 @@ function deleteChecklist(checklistId) {
                 checklistItems.innerHTML = "";
                 subchecklistList.innerHTML = "";
                 subchecklistMenu.style.display = "none";
+                subchecklistSelector.style.display = "none";
             }
-            loadChecklists(true); // Otevřít seznam po smazání
+            loadChecklists(true);
         })
         .catch(err => {
             console.error("Chyba při mazání checklistu:", err);
@@ -243,7 +246,8 @@ function switchChecklist(checklistId) {
         checklistItems.innerHTML = "";
         subchecklistList.innerHTML = "";
         subchecklistMenu.style.display = "none";
-        toggleChecklistList(false); // Sbalit seznam po výběru
+        subchecklistSelector.style.display = "none";
+        toggleChecklistList(false);
         updateCurrentDisplay();
         return;
     }
@@ -252,7 +256,7 @@ function switchChecklist(checklistId) {
     loadTasks();
     loadSubchecklists();
     loadChecklists();
-    toggleChecklistList(false); // Sbalit seznam po výběru
+    toggleChecklistList(false);
     updateCurrentDisplay();
 }
 
@@ -299,6 +303,7 @@ function loadChecklists(openList = false) {
             checklistItems.innerHTML = "";
             subchecklistList.innerHTML = "";
             subchecklistMenu.style.display = "none";
+            subchecklistSelector.style.display = "none";
             currentChecklistDisplay.style.display = "none";
             toggleChecklistList(true);
             newSubchecklistBtn.style.display = "none";
@@ -312,14 +317,17 @@ function loadSubchecklists() {
     if (!currentChecklistId) {
         subchecklistList.innerHTML = "";
         subchecklistMenu.style.display = "none";
+        subchecklistSelector.style.display = "none";
         return;
     }
     const subchecklistsRef = ref(database, `checklist/${currentChecklistId}/subchecklists`);
     console.log("Načítám podchecklisty pro checklist:", currentChecklistId);
     onValue(subchecklistsRef, snapshot => {
         subchecklistList.innerHTML = '';
+        subchecklistSelector.innerHTML = '<option value="">Hlavní checklist</option>';
         if (snapshot.exists()) {
             subchecklistMenu.style.display = "block";
+            subchecklistSelector.style.display = "inline-block";
             const subchecklists = [];
             snapshot.forEach(childSnapshot => {
                 const subchecklistId = childSnapshot.key;
@@ -336,6 +344,10 @@ function loadSubchecklists() {
                     <button class="delete-subchecklist-btn" onclick="deleteSubchecklist('${subchecklist.id}')">Smazat</button>
                 `;
                 subchecklistList.appendChild(li);
+                const option = document.createElement('option');
+                option.value = subchecklist.id;
+                option.textContent = subchecklist.name;
+                subchecklistSelector.appendChild(option);
             });
             if (!subchecklistList.sortable) {
                 subchecklistList.sortable = new Sortable(subchecklistList, {
@@ -347,7 +359,9 @@ function loadSubchecklists() {
         } else {
             subchecklistMenu.style.display = "none";
             subchecklistList.classList.remove('show');
+            subchecklistSelector.style.display = "none";
         }
+        loadTasks();
     }, err => {
         console.error("Chyba při načítání podchecklistů:", err);
     });
@@ -411,6 +425,7 @@ async function updateSubchecklistOrder() {
 async function addTask() {
     console.log("Spouštím addTask, currentChecklistId:", currentChecklistId);
     const newTaskInput = document.getElementById('new-task');
+    const subchecklistId = subchecklistSelector.value;
     if (!newTaskInput) {
         console.error("Input s id='new-task' nenalezen!");
         alert("Chyba: Input pro nový úkol nenalezen!");
@@ -423,7 +438,10 @@ async function addTask() {
         alert("Vyberte checklist nebo zadejte text úkolu!");
         return;
     }
-    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
+    const path = subchecklistId 
+        ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks`
+        : `checklist/${currentChecklistId}/tasks`;
+    const tasksRef = ref(database, path);
     const snapshot = await get(tasksRef);
     const tasks = snapshot.val() || {};
     const orders = Object.values(tasks).map(t => t.order || 0);
@@ -431,22 +449,25 @@ async function addTask() {
     const newOrder = maxOrder + 1;
     const newTaskRef = push(tasksRef);
     const newTaskId = newTaskRef.key;
-    console.log("Přidávám úkol:", taskText, "do checklistu:", currentChecklistId);
+    console.log("Přidávám úkol:", taskText, "do:", subchecklistId ? `podchecklistu ${subchecklistId}` : `hlavního checklistu ${currentChecklistId}`);
     try {
         await set(newTaskRef, { text: taskText, checked: false, subtasks: {}, order: newOrder });
         console.log("Úkol úspěšně přidán:", newTaskId);
         newTaskInput.value = '';
         loadTasks();
     } catch (err) {
-        console.error("Chyba při přidávání ú ambito:", err);
+        console.error("Chyba při přidávání úkolu:", err);
         alert("Chyba při přidávání úkolu: " + err.message);
     }
 }
 
-function editTask(taskId, currentText) {
+function editTask(taskId, currentText, subchecklistId) {
     const newText = prompt("Upravit úkol:", currentText);
     if (newText && newText.trim() !== '') {
-        const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
+        const path = subchecklistId 
+            ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}`
+            : `checklist/${currentChecklistId}/tasks/${taskId}`;
+        const taskRef = ref(database, path);
         onValue(taskRef, snapshot => {
             const taskData = snapshot.val();
             set(taskRef, { ...taskData, text: newText.trim() })
@@ -455,10 +476,13 @@ function editTask(taskId, currentText) {
     }
 }
 
-function editSubtask(taskId, subtaskId, currentText) {
+function editSubtask(taskId, subtaskId, currentText, subchecklistId) {
     const newText = prompt("Upravit podúkol:", currentText);
     if (newText && newText.trim() !== '') {
-        const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
+        const path = subchecklistId 
+            ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}/subtasks/${subtaskId}`
+            : `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`;
+        const subtaskRef = ref(database, path);
         onValue(subtaskRef, snapshot => {
             const subtaskData = snapshot.val();
             set(subtaskRef, { ...subtaskData, text: newText.trim() })
@@ -467,8 +491,8 @@ function editSubtask(taskId, subtaskId, currentText) {
     }
 }
 
-async function addSubtask(taskId) {
-    console.log("Spouštím addSubtask pro taskId:", taskId);
+async function addSubtask(taskId, subchecklistId) {
+    console.log("Spouštím addSubtask pro taskId:", taskId, "subchecklistId:", subchecklistId);
     const subtaskInput = document.getElementById(`subtask-input-${taskId}`);
     if (!subtaskInput) {
         console.error("Input pro podúkol nenalezen:", `subtask-input-${taskId}`);
@@ -482,7 +506,10 @@ async function addSubtask(taskId) {
         alert("Zadejte text podúkolu!");
         return;
     }
-    const subtasksRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`);
+    const path = subchecklistId 
+        ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}/subtasks`
+        : `checklist/${currentChecklistId}/tasks/${taskId}/subtasks`;
+    const subtasksRef = ref(database, path);
     const snapshot = await get(subtasksRef);
     const subtasks = snapshot.val() || {};
     const orders = Object.values(subtasks).map(s => s.order || 0);
@@ -501,14 +528,20 @@ async function addSubtask(taskId) {
     }
 }
 
-function deleteTask(taskId) {
-    const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
-    console.log("Mažu úkol:", taskId, "z checklistu:", currentChecklistId);
+function deleteTask(taskId, subchecklistId) {
+    const path = subchecklistId 
+        ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}`
+        : `checklist/${currentChecklistId}/tasks/${taskId}`;
+    const taskRef = ref(database, path);
+    console.log("Mažu úkol:", taskId, "z:", subchecklistId ? `podchecklistu ${subchecklistId}` : `hlavního checklistu ${currentChecklistId}`);
     remove(taskRef).catch(err => console.error("Chyba při mazání úkolu:", err));
 }
 
-function deleteSubtask(taskId, subtaskId) {
-    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
+function deleteSubtask(taskId, subtaskId, subchecklistId) {
+    const path = subchecklistId 
+        ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}/subtasks/${subtaskId}`
+        : `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`;
+    const subtaskRef = ref(database, path);
     console.log("Mažu podúkol:", subtaskId, "z úkolu:", taskId);
     remove(subtaskRef).catch(err => console.error("Chyba při mazání podúkolu:", err));
 }
@@ -523,9 +556,12 @@ function toggleSubtaskMenu(taskId, forceOpen = false) {
     }
 }
 
-function setupCheckbox(taskId) {
+function setupCheckbox(taskId, subchecklistId) {
     const checkbox = document.getElementById(taskId);
-    const taskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}`);
+    const path = subchecklistId 
+        ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}`
+        : `checklist/${currentChecklistId}/tasks/${taskId}`;
+    const taskRef = ref(database, path);
     checkbox.addEventListener('change', function() {
         onValue(taskRef, snapshot => {
             const taskData = snapshot.val();
@@ -535,9 +571,12 @@ function setupCheckbox(taskId) {
     });
 }
 
-function setupSubtaskCheckbox(taskId, subtaskId) {
+function setupSubtaskCheckbox(taskId, subtaskId, subchecklistId) {
     const checkbox = document.getElementById(subtaskId);
-    const subtaskRef = ref(database, `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`);
+    const path = subchecklistId 
+        ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}/subtasks/${subtaskId}`
+        : `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}`;
+    const subtaskRef = ref(database, path);
     checkbox.addEventListener('change', function() {
         onValue(subtaskRef, snapshot => {
             const subtaskData = snapshot.val();
@@ -553,108 +592,151 @@ function loadTasks() {
         checklistItems.innerHTML = '';
         return;
     }
-    const tasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
     console.log("Načítám úkoly pro checklist:", currentChecklistId);
-    onValue(tasksRef, snapshot => {
-        console.log("Snapshot úkolů:", snapshot.val());
-        checklistItems.innerHTML = '';
+    checklistItems.innerHTML = '';
+
+    // Load main checklist tasks
+    const mainTasksRef = ref(database, `checklist/${currentChecklistId}/tasks`);
+    onValue(mainTasksRef, snapshot => {
         if (snapshot.exists()) {
             const tasks = [];
             snapshot.forEach(childSnapshot => {
                 const taskId = childSnapshot.key;
                 const taskData = childSnapshot.val();
-                tasks.push({ id: taskId, ...taskData });
+                tasks.push({ id: taskId, ...taskData, subchecklistId: null });
             });
             tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
-            tasks.forEach(taskData => {
-                const taskId = taskData.id;
-                const hasSubtasks = taskData.subtasks && Object.keys(taskData.subtasks).length > 0;
-                const newItem = document.createElement('div');
-                newItem.className = 'checklist-item';
-                newItem.dataset.id = taskId;
-                newItem.innerHTML = `
-                    <div class="task-header">
-                        <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
-                        <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
-                        <button class="edit-btn" data-task-id="${taskId}">Upravit</button>
-                        <button class="delete-btn" data-task-id="${taskId}">Smazat</button>
-                        <button class="toggle-subtask-btn" data-task-id="${taskId}">${hasSubtasks ? '▼' : '▶'} Podúkoly</button>
-                    </div>
-                    <div class="subtask-menu" id="subtask-menu-${taskId}" style="display: ${hasSubtasks ? 'block' : 'none'};">
-                        <div class="add-subtask" id="add-subtask-${taskId}">
-                            <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
-                            <button class="add-subtask-btn" data-task-id="${taskId}">Přidat podúkol</button>
-                        </div>
-                        <div class="subtask-list" id="subtask-list-${taskId}"></div>
-                    </div>
-                `;
-                checklistItems.appendChild(newItem);
-                setupCheckbox(taskId);
-
-                const editBtn = newItem.querySelector(`.edit-btn[data-task-id="${taskId}"]`);
-                const deleteBtn = newItem.querySelector(`.delete-btn[data-task-id="${taskId}"]`);
-                const toggleSubtaskBtn = newItem.querySelector(`.toggle-subtask-btn[data-task-id="${taskId}"]`);
-                const addSubtaskBtn = newItem.querySelector(`.add-subtask-btn[data-task-id="${taskId}"]`);
-
-                editBtn.addEventListener('click', () => editTask(taskId, taskData.text));
-                deleteBtn.addEventListener('click', () => deleteTask(taskId));
-                toggleSubtaskBtn.addEventListener('click', () => toggleSubtaskMenu(taskId));
-                addSubtaskBtn.addEventListener('click', () => addSubtask(taskId));
-
-                if (taskData.subtasks) {
-                    const subtaskList = document.getElementById(`subtask-list-${taskId}`);
-                    const subtasks = [];
-                    Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
-                        subtasks.push({ id: subtaskId, ...subtaskData });
-                    });
-                    subtasks.sort((a, b) => (a.order || 0) - (b.order || 0));
-                    subtasks.forEach(subtaskData => {
-                        const subtaskId = subtaskData.id;
-                        const subtaskItem = document.createElement('div');
-                        subtaskItem.className = 'subtask-item';
-                        subtaskItem.dataset.id = subtaskId;
-                        subtaskItem.innerHTML = `
-                            <input type="checkbox" id="${subtaskId}" ${subtaskData.checked ? "checked" : ""}>
-                            <label for="${subtaskId}" class="${subtaskData.checked ? "completed" : ""}">${subtaskData.text}</label>
-                            <button class="edit-subtask-btn" data-task-id="${taskId}" data-subtask-id="${subtaskId}">Upravit</button>
-                            <button class="delete-subtask-btn" data-task-id="${taskId}" data-subtask-id="${subtaskId}">Smazat</button>
-                        `;
-                        subtaskList.appendChild(subtaskItem);
-                        setupSubtaskCheckbox(taskId, subtaskId);
-
-                        const editSubtaskBtn = subtaskItem.querySelector(`.edit-subtask-btn[data-subtask-id="${subtaskId}"]`);
-                        const deleteSubtaskBtn = subtaskItem.querySelector(`.delete-subtask-btn[data-subtask-id="${subtaskId}"]`);
-                        editSubtaskBtn.addEventListener('click', () => editSubtask(taskId, subtaskId, subtaskData.text));
-                        deleteSubtaskBtn.addEventListener('click', () => deleteSubtask(taskId, subtaskId));
-                    });
-                    if (!subtaskList.sortable) {
-                        subtaskList.sortable = new Sortable(subtaskList, {
-                            animation: 150,
-                            onEnd: () => updateSubtaskOrder(taskId)
-                        });
-                    }
-                }
-            });
-            if (!checklistItems.sortable) {
-                checklistItems.sortable = new Sortable(checklistItems, {
-                    animation: 150,
-                    onEnd: updateTaskOrder
-                });
-            }
-        } else {
-            console.log("Žádné úkoly v checklistu:", currentChecklistId);
+            renderTasks(tasks);
         }
     }, err => {
-        console.error("Chyba při načítání úkolů:", err);
+        console.error("Chyba při načítání hlavních úkolů:", err);
     });
+
+    // Load subchecklist tasks
+    const subchecklistsRef = ref(database, `checklist/${currentChecklistId}/subchecklists`);
+    onValue(subchecklistsRef, snapshot => {
+        if (snapshot.exists()) {
+            snapshot.forEach(childSnapshot => {
+                const subchecklistId = childSnapshot.key;
+                const subchecklistData = childSnapshot.val();
+                const tasksRef = ref(database, `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks`);
+                onValue(tasksRef, tasksSnapshot => {
+                    if (tasksSnapshot.exists()) {
+                        const tasks = [];
+                        tasksSnapshot.forEach(taskSnapshot => {
+                            const taskId = taskSnapshot.key;
+                            const taskData = taskSnapshot.val();
+                            tasks.push({ id: taskId, ...taskData, subchecklistId });
+                        });
+                        tasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+                        renderTasks(tasks, subchecklistData.name);
+                    }
+                }, err => {
+                    console.error("Chyba při načítání úkolů podchecklistu:", err);
+                });
+            });
+        }
+    }, err => {
+        console.error("Chyba při načítání podchecklistů pro úkoly:", err);
+    });
+
+    function renderTasks(tasks, subchecklistName = null) {
+        tasks.forEach(taskData => {
+            const taskId = taskData.id;
+            const subchecklistId = taskData.subchecklistId;
+            const hasSubtasks = taskData.subtasks && Object.keys(taskData.subtasks).length > 0;
+            const newItem = document.createElement('div');
+            newItem.className = 'checklist-item';
+            newItem.dataset.id = taskId;
+            newItem.dataset.subchecklistId = subchecklistId || '';
+            let html = '';
+            if (subchecklistName) {
+                html += `<div class="subchecklist-header"><h4>${subchecklistName}</h4></div>`;
+            }
+            html += `
+                <div class="task-header">
+                    <input type="checkbox" id="${taskId}" ${taskData.checked ? "checked" : ""}>
+                    <label for="${taskId}" class="${taskData.checked ? "completed" : ""}">${taskData.text}</label>
+                    <button class="edit-btn" data-task-id="${taskId}" data-subchecklist-id="${subchecklistId || ''}">Upravit</button>
+                    <button class="delete-btn" data-task-id="${taskId}" data-subchecklist-id="${subchecklistId || ''}">Smazat</button>
+                    <button class="toggle-subtask-btn" data-task-id="${taskId}">${hasSubtasks ? '▼' : '▶'} Podúkoly</button>
+                </div>
+                <div class="subtask-menu" id="subtask-menu-${taskId}" style="display: ${hasSubtasks ? 'block' : 'none'};">
+                    <div class="add-subtask" id="add-subtask-${taskId}">
+                        <input type="text" id="subtask-input-${taskId}" placeholder="Zadejte nový podúkol">
+                        <button class="add-subtask-btn" data-task-id="${taskId}" data-subchecklist-id="${subchecklistId || ''}">Přidat podúkol</button>
+                    </div>
+                    <div class="subtask-list" id="subtask-list-${taskId}"></div>
+                </div>
+            `;
+            newItem.innerHTML = html;
+            checklistItems.appendChild(newItem);
+            setupCheckbox(taskId, subchecklistId);
+
+            const editBtn = newItem.querySelector(`.edit-btn[data-task-id="${taskId}"]`);
+            const deleteBtn = newItem.querySelector(`.delete-btn[data-task-id="${taskId}"]`);
+            const toggleSubtaskBtn = newItem.querySelector(`.toggle-subtask-btn[data-task-id="${taskId}"]`);
+            const addSubtaskBtn = newItem.querySelector(`.add-subtask-btn[data-task-id="${taskId}"]`);
+
+            editBtn.addEventListener('click', () => editTask(taskId, taskData.text, subchecklistId));
+            deleteBtn.addEventListener('click', () => deleteTask(taskId, subchecklistId));
+            toggleSubtaskBtn.addEventListener('click', () => toggleSubtaskMenu(taskId));
+            addSubtaskBtn.addEventListener('click', () => addSubtask(taskId, subchecklistId));
+
+            if (taskData.subtasks) {
+                const subtaskList = document.getElementById(`subtask-list-${taskId}`);
+                const subtasks = [];
+                Object.entries(taskData.subtasks).forEach(([subtaskId, subtaskData]) => {
+                    subtasks.push({ id: subtaskId, ...subtaskData });
+                });
+                subtasks.sort((a, b) => (a.order || 0) - (b.order || 0));
+                subtasks.forEach(subtaskData => {
+                    const subtaskId = subtaskData.id;
+                    const subtaskItem = document.createElement('div');
+                    subtaskItem.className = 'subtask-item';
+                    subtaskItem.dataset.id = subtaskId;
+                    subtaskItem.innerHTML = `
+                        <input type="checkbox" id="${subtaskId}" ${subtaskData.checked ? "checked" : ""}>
+                        <label for="${subtaskId}" class="${subtaskData.checked ? "completed" : ""}">${subtaskData.text}</label>
+                        <button class="edit-subtask-btn" data-task-id="${taskId}" data-subtask-id="${subtaskId}" data-subchecklist-id="${subchecklistId || ''}">Upravit</button>
+                        <button class="delete-subtask-btn" data-task-id="${taskId}" data-subtask-id="${subtaskId}" data-subchecklist-id="${subchecklistId || ''}">Smazat</button>
+                    `;
+                    subtaskList.appendChild(subtaskItem);
+                    setupSubtaskCheckbox(taskId, subtaskId, subchecklistId);
+
+                    const editSubtaskBtn = subtaskItem.querySelector(`.edit-subtask-btn[data-subtask-id="${subtaskId}"]`);
+                    const deleteSubtaskBtn = subtaskItem.querySelector(`.delete-subtask-btn[data-subtask-id="${subtaskId}"]`);
+                    editSubtaskBtn.addEventListener('click', () => editSubtask(taskId, subtaskId, subtaskData.text, subchecklistId));
+                    deleteSubtaskBtn.addEventListener('click', () => deleteSubtask(taskId, subtaskId, subchecklistId));
+                });
+                if (!subtaskList.sortable) {
+                    subtaskList.sortable = new Sortable(subtaskList, {
+                        animation: 150,
+                        onEnd: () => updateSubtaskOrder(taskId, subchecklistId)
+                    });
+                }
+            }
+        });
+
+        if (!checklistItems.sortable) {
+            checklistItems.sortable = new Sortable(checklistItems, {
+                animation: 150,
+                onEnd: () => updateTaskOrder()
+            });
+        }
+    }
 }
 
 async function updateTaskOrder() {
     const items = Array.from(checklistItems.children);
     const updates = {};
     items.forEach((item, index) => {
-        const id = item.dataset.id;
-        updates[`checklist/${currentChecklistId}/tasks/${id}/order`] = index;
+        const taskId = item.dataset.id;
+        const subchecklistId = item.dataset.subchecklistId;
+        const path = subchecklistId 
+            ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}/order`
+            : `checklist/${currentChecklistId}/tasks/${taskId}/order`;
+        updates[path] = index;
     });
     try {
         await update(ref(database), updates);
@@ -664,13 +746,16 @@ async function updateTaskOrder() {
     }
 }
 
-async function updateSubtaskOrder(taskId) {
+async function updateSubtaskOrder(taskId, subchecklistId) {
     const subtaskList = document.getElementById(`subtask-list-${taskId}`);
     const items = Array.from(subtaskList.children);
     const updates = {};
     items.forEach((item, index) => {
-        const id = item.dataset.id;
-        updates[`checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${id}/order`] = index;
+        const subtaskId = item.dataset.id;
+        const path = subchecklistId 
+            ? `checklist/${currentChecklistId}/subchecklists/${subchecklistId}/tasks/${taskId}/subtasks/${subtaskId}/order`
+            : `checklist/${currentChecklistId}/tasks/${taskId}/subtasks/${subtaskId}/order`;
+        updates[path] = index;
     });
     try {
         await update(ref(database), updates);
