@@ -35,7 +35,7 @@ header {
     margin-bottom: 1.5em;
     padding: 1em;
     border-bottom: 1px solid #eee;
-    cursor: move; /* Pro drag-and-drop */
+    cursor: move;
 }
 
 .task-header {
@@ -61,7 +61,7 @@ header {
     align-items: center;
     margin-bottom: 0.5em;
     gap: 10px;
-    cursor: move; /* Pro drag-and-drop subtasks */
+    cursor: move;
 }
 
 .checklist-item input[type="checkbox"],
@@ -137,7 +137,13 @@ header {
 .add-task input[type="text"],
 .add-subtask input[type="text"] {
     padding: 0.5em;
-    width: 70%;
+    width: 60%;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+
+.add-task select {
+    padding: 0.5em;
     border: 1px solid #ddd;
     border-radius: 3px;
 }
@@ -216,14 +222,14 @@ header {
     padding: 0;
     margin: 0;
     width: 100%;
-    display: none; /* Defaultně skrytý */
+    display: none;
     border: 1px solid #ddd;
     border-radius: 5px;
     background-color: #f9f9f9;
 }
 
 #checklist-list.show, #subchecklist-list.show {
-    display: block; /* Zobrazí se po toggle */
+    display: block;
 }
 
 #checklist-list li, #subchecklist-list li {
@@ -265,8 +271,9 @@ header {
     }
 
     .add-task input[type="text"],
-    .add-subtask input[type="text"] {
-        width: 60%;
+    .add-subtask input[type="text"],
+    .add-task select {
+        width: 50%;
     }
 
     .task-header {
